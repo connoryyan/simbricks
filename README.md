@@ -1,12 +1,3 @@
 # simbricks
 
-## Workshop 7-2 24/9/2026
-
-- Q: Not sure how to structure my project. Now there are 3 folders
-  A: Do not yet try to implement all the thing. Make the project runnable first, and then draw a UML. If everything is ok, and all concept required by the rubric is met, then proceed with all your ideas.
-- Q: What else do I need to do
-  A: You need to make sure your code has all the concepts including inheritance, abstraction, capsulation, etc.
-  - Before:
-    ```py
-    
-    ```
+A drop-in simulator for Pybricks MicroPython, re-implementing the Pybricks API on top of a small physics core, so unmodified robot scripts run against a virtual robot on computer. Because the same script also runs on a real LEGO hub, it supports a simulate-then-deploy workflow, and closing the sim-to-real gap through calibration against logged hardware data is a future goal.
