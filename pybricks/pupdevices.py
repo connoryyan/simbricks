@@ -2,13 +2,13 @@ from .parameters import Direction, Port, Stop
 from abc import ABC, abstractmethod
 from sim.motor_model import MotorModel
 from sim.clock import clock
-from tools import wait
-# from typing import Collection 
+# from typing import Collection
 # ABC for sized iterable container classes.
 
 
 def _is_int(num):
     return isinstance(num, int) and not isinstance(num, bool)
+
 
 def _effective_gear_ratio(gears: list[int] | list[list[int]]) -> float:
     '''
@@ -31,7 +31,7 @@ def _effective_gear_ratio(gears: list[int] | list[list[int]]) -> float:
 
             ratio *= chain[i + 1] / chain[i]
 
-        return ratio 
+        return ratio
 
     first = gears[0]
     if isinstance(first, list):
@@ -42,10 +42,12 @@ def _effective_gear_ratio(gears: list[int] | list[list[int]]) -> float:
 
     return chain_ratio(gears)
 
+
 class Device(ABC):
     '''
     Simulate an electronic component of the robot. 
     '''
+
     def __init__(self, port: Port):
         self.port = port
 
@@ -55,12 +57,12 @@ class Actuator(Device, ABC):
     Motor class ABC
     '''
 
-    def __init__(self, port: Port, 
+    def __init__(self, port: Port,
                  positive_direction: Direction = Direction.CLOCKWISE):
         super().__init__(port)
-        self._direction = positive_direction
-        self._model = MotorModel()
-        
+        self._direction: Direction = positive_direction
+        self._model: MotorModel = MotorModel()
+        clock.add_steppable(self._model)
 
     @abstractmethod
     def stop():
@@ -99,17 +101,51 @@ class Motor(Actuator):
         super().__init__(port)
 
     def run(self, speed: float):
-        self._model.run(speed)
+        self._model.run(self._direction.value * speed)
 
-    def run_time(self, speed: float, time: float, then: Stop):
-        self._model.run(speed)
-        clock.advance_ms(time)
+    def run_time(self, speed: float, time: float, then: Stop, wait: bool = True):
+        self.run(speed)
 
-    def run_angle(self, speed: float, angle: float, then: Stop):
-        self._model.run(speed)
-        current_angle = self._model.angle()
-        clock.advance_until(self._model.angle)
-        
+        if wait:
+            clock.advance_ms(time)
+            self._apply_then(then)
+
+    def run_angle(self, speed: float, angle: float, then: Stop = None, wait: bool = True):
+        direction = (1 if speed >= 0 else -1) * (1 if angle >= 0 else -1)
+        self.run(direction * abs(speed))
+
+        start_angle = self._model.angle()
+
+        def reached() -> bool:
+            traveled = (self._model.angle() - start_angle) * direction
+            return traveled >= abs(angle)
+
+        if wait:
+            clock.advance_until(reached, timeout_ms=60_000)
+            self._apply_then(then)
+
+    def _apply_then(self, then: Stop) -> None:
+        if then == Stop.BRAKE:
+            self.brake()
+        elif then == Stop.COAST or then == Stop.COAST_SMART:
+            self.stop()
+        elif then == Stop.HOLD:
+            self.brake() # Leave hold later
+
+    def stop(self):
+        self._model.stop()
+
+    def brake(self):
+        self._model.brake()
+
+    def angle(self):
+        return self._direction.value * self._model.angle()
+
+    def speed(self):
+        return self._direction.value * self._model.speed()
+
+    def reset_angle(self, angle=None):
+        self._model.reset_angle(0.0 if angle is None else self._direction.value * angle)
     
-        
-
+    def stalled(self) -> bool:
+        return self._model.is_stalled()

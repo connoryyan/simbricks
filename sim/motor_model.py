@@ -28,7 +28,13 @@ class MotorModel:
     def step(self, dt_s: float) -> None:
         if self._braking:
             alpha = min(1.0, dt_s / max(self.time_constant_s * 0.3, 1e-6)) # damping coefficient
-            self.speed_dps += -self.speed_dps * alpha #exponential
+            self.speed_dps += -self.speed_dps * alpha # exponential
+
+        else:
+            alpha = min(1.0, dt_s / max(self.time_constant_s, 1e-6))
+            self.speed_dps += (self._target_speed_dps - self.speed_dps) * alpha
+
+        self.angle_deg += self.speed_dps * dt_s
 
     def run(self, speed_dps: float) -> None:
         self._braking = False

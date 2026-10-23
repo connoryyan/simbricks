@@ -10,41 +10,42 @@ class SimClock:
         self.time_ms = 0
         self._steppables = set() # aggregation
 
-    def add_device(self, steppable) -> None:
+    def add_steppable(self, steppable) -> None:
         '''
         Add a device which needs to be updated every frame
         '''
         if steppable not in self._steppables:
-            self._steppables.append(steppable)
+            self._steppables.add(steppable)
 
-    def remove_device(self, steppable) -> None:
+    def remove_steppable(self, steppable) -> None:
         if steppable in self._steppables:
             self._steppables.remove(steppable)
 
+    def _tick(self, dt_ms: float) -> None:
+        '''
+        Advance every device by dt_ms.
+        '''
+        dt_s = dt_ms / 1000.0
+        for s in list(self._steppables):  # copy: devices may be removed during a step
+            s.step(dt_s)
+        self.time_ms += dt_ms
+
     def advance_ms(self, duration_ms: float) -> None:
-        '''
-        Push the time forward.
-        '''
         remaining = duration_ms
         while remaining > 0:
-            this_step = min(self.step_ms, remaining) 
-            # If the remaining time is less than a step, treat it as a step
-            for s in self._steppables:
-                s.step(this_step / 1000.0)
-            self.time_ms += this_step
+            # the last step may be shorter than step_ms
+            this_step = min(self.step_ms, remaining)
+            self._tick(this_step)
             remaining -= this_step
 
-    def advance_until(self, condition, timeout_ms: float | None = None, poll_step_ms: int | None = None) -> bool:
-        '''
-        Advance the simulation until the condition is met.
-        '''
-        step = poll_step_ms if poll_step_ms else self.step_ms
-        # Make sure not none.
+    def advance_until(self, condition, timeout_ms: float | None = None,
+                      poll_step_ms: int | None = None) -> bool:
+        step = self.step_ms if poll_step_ms is None else poll_step_ms
+        if step <= 0:
+            raise ValueError("poll_step_ms must be positive")
         elapsed = 0.0
         while not condition():
-            for s in self._steppables:
-                s.step(step / 1000.0)
-            self.time_ms += step
+            self._tick(step)
             elapsed += step
             if timeout_ms is not None and elapsed >= timeout_ms:
                 return False
