@@ -1,9 +1,10 @@
-from .parameters import Direction, Port, Stop
 from abc import ABC, abstractmethod
-from sim.motor_model import MotorModel
+
+from ..parameters import Direction, Port, Stop
+from sim.models.motor_model import MotorModel
 from sim.clock import clock
-# from typing import Collection
-# ABC for sized iterable container classes.
+
+from .device import Device
 
 
 def _is_int(num):
@@ -41,15 +42,6 @@ def _effective_gear_ratio(gears: list[int] | list[list[int]]) -> float:
         return total
 
     return chain_ratio(gears)
-
-
-class Device(ABC):
-    '''
-    Simulate an electronic component of the robot. 
-    '''
-
-    def __init__(self, port: Port):
-        self.port = port
 
 
 class Actuator(Device, ABC):
@@ -114,10 +106,10 @@ class Motor(Actuator):
         direction = (1 if speed >= 0 else -1) * (1 if angle >= 0 else -1)
         self.run(direction * abs(speed))
 
-        start_angle = self._model.angle()
+        start_angle = self._model.get_angle()
 
         def reached() -> bool:
-            traveled = (self._model.angle() - start_angle) * direction
+            traveled = (self._model.get_angle() - start_angle) * direction
             return traveled >= abs(angle)
 
         if wait:
@@ -139,13 +131,14 @@ class Motor(Actuator):
         self._model.brake()
 
     def angle(self):
-        return self._direction.value * self._model.angle()
+        return self._direction.value * self._model.get_angle()
 
     def speed(self):
-        return self._direction.value * self._model.speed()
+        return self._direction.value * self._model.get_speed()
 
     def reset_angle(self, angle=None):
-        self._model.reset_angle(0.0 if angle is None else self._direction.value * angle)
+        self._model.angle = (0.0 if angle is None 
+                             else self._direction.value * angle)
     
     def stalled(self) -> bool:
         return self._model.is_stalled()

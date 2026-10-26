@@ -1,3 +1,4 @@
+from .models import Model
 
 
 STEP_MS = 5 # dt
@@ -8,11 +9,14 @@ class SimClock:
         self.step_ms = step_ms
         self.step_s = step_ms / 1000.0
         self.time_ms = 0
-        self._steppables = set() # aggregation
+        self._steppables: set[Model] = set() # aggregation
 
     def add_steppable(self, steppable) -> None:
         '''
         Add a device which needs to be updated every frame
+
+        Arg:
+            steppable (Model)
         '''
         if steppable not in self._steppables:
             self._steppables.add(steppable)
