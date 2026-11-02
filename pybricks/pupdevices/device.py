@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 
-from ..parameters import Direction, Port, Stop
+from ..parameters import Port
+from sim.models.model import Model
 
 class Device(ABC):
     '''
@@ -9,3 +10,4 @@ class Device(ABC):
 
     def __init__(self, port: Port):
         self.port = port
+        self._model: Model = Model()

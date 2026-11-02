@@ -69,3 +69,4 @@ class ScriptableWorld(World):
 
 # Default field. When launching the sim it can be replaced.
 current_world: World = FlatWhiteWorld()
+

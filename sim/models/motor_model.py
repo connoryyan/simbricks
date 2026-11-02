@@ -71,3 +71,5 @@ class MotorModel(Model):
 
     def is_stalled(self, speed_threshold_dps: float = 1.0) -> bool:
         return abs(self._target_speed_dps) > speed_threshold_dps and abs(self._speed_dps) < speed_threshold_dps
+
+    
