@@ -54,7 +54,6 @@ class Actuator(Device, ABC):
         super().__init__(port)
         self._direction: Direction = positive_direction
         self._model: MotorModel = MotorModel()
-        clock.add_steppable(self._model)
 
     @abstractmethod
     def stop():
@@ -71,7 +70,7 @@ class DCMotor(Actuator):
     '''
 
     def __init__(self, port: Port, positive_direction: Direction = Direction.CLOCKWISE):
-        super().__init__(port)
+        super().__init__(port, positive_direction)
         self._model = MotorModel()
         # clock.register(self._model)
 
@@ -83,26 +82,35 @@ class DCMotor(Actuator):
         speed = sign * duty / 100.0 * self._model.max_speed_dps
         self._model.run(speed)
 
+    def stop(self):
+        self._model.stop()
 
-class Motor(Actuator):
+    def brake(self):
+        self._model.brake()
+
+
+class Motor(DCMotor):
     '''
     Motor with angle feedback.
     '''
 
-    def __init__(self, port: Port, positive_direction: Direction = Direction.CLOCKWISE):
-        super().__init__(port)
+    def __init__(self, port: Port, 
+                 positive_direction: Direction = Direction.CLOCKWISE):
+        super().__init__(port, positive_direction)
 
     def run(self, speed: float):
         self._model.run(self._direction.value * speed)
 
-    def run_time(self, speed: float, time: float, then: Stop, wait: bool = True):
+    def run_time(self, speed: float, time: float, 
+                 then: Stop = None, wait: bool = True):
         self.run(speed)
 
         if wait:
             clock.advance_ms(time)
             self._apply_then(then)
 
-    def run_angle(self, speed: float, angle: float, then: Stop = None, wait: bool = True):
+    def run_angle(self, speed: float, angle: float, 
+                  then: Stop = None, wait: bool = True):
         direction = (1 if speed >= 0 else -1) * (1 if angle >= 0 else -1)
         self.run(direction * abs(speed))
 
@@ -123,12 +131,6 @@ class Motor(Actuator):
             self.stop()
         elif then == Stop.HOLD:
             self.brake() # Leave hold later
-
-    def stop(self):
-        self._model.stop()
-
-    def brake(self):
-        self._model.brake()
 
     def angle(self):
         return self._direction.value * self._model.get_angle()

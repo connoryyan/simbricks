@@ -1,11 +1,16 @@
 import math
 
 from sim.clock import clock
-from pybricks.pupdevices import Device, Motor
+from .model  import Model
 
 
-class DriveBaseModel:
-    def __init__(self, left_motor, right_motor, wheel_diameter: float, axle_track: float):
+class DriveBaseModel(Model):
+    def __init__(self, time_constant_s: float = 0.15,
+                 left_motor = None, right_motor = None,
+                 wheel_diameter: float = None, axle_track: float = None):
+
+        from pybricks.pupdevices import Motor
+        # Not putting on the top to avoid circular imports.
         
         if not isinstance(left_motor, Motor):
             raise TypeError(f"Expected a Motor object but got "
@@ -27,16 +32,19 @@ class DriveBaseModel:
             raise ValueError("left_motor and right_motor must" \
                              " be different motors")
 
+        super().__init__(time_constant_s)
+
         self._left: Motor = left_motor
         self._right: Motor = right_motor
-        self.mm_per_deg: float = math.pi * wheel_diameter / 360.0   # wheel rim travel per wheel degree
+        # wheel rim travel per wheel degree
+        self.mm_per_deg: float = math.pi * wheel_diameter / 360.0
         self.wheel_diameter: float = wheel_diameter
         self.axle_track: float = axle_track
 
         # True pose in the world frame.
         self.x_mm = 0.0
         self.y_mm = 0.0
-        self.heading_rad = 0.0     # counter-clockwise
+        self.heading_rad = 0.0 # counter-clockwise
 
         # Running totals since creation. Never reset: DriveBase keeps its own
         # offsets for its resettable distance()/angle().
@@ -46,8 +54,6 @@ class DriveBaseModel:
         self._last_l: float = left_motor.angle()
         self._last_r: float = right_motor.angle()
         self._mounts: list = []
-
-        clock.add_steppable(self)
 
     def step(self, dt_s: float) -> None:
         self._update_odometry()

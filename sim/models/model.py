@@ -1,5 +1,7 @@
 from abc import ABC, abstractmethod
 
+from ..clock import clock
+
 
 class Model(ABC):
     '''
@@ -12,6 +14,7 @@ class Model(ABC):
             time_constant_s (float): Responding time (second)
         '''
         self._time_constant_s: float = time_constant_s
+        clock.add_steppable(self)
 
     def get_time_constant_s(self):
         return self._time_constant_s

@@ -1,7 +1,7 @@
 import random
 from abc import ABC, abstractmethod
 
-from sim.world import World, current_world
+from sim.models import SensorModel, ColorSensorModel, UltrasonicSensorModel
 
 from ..parameters import Port
 from .device import Device
@@ -14,8 +14,8 @@ def _clamp(value: float, low: float, high: float) -> float:
     return max(low, min(high, value))
 
 
-class Sensor(ABC, Device):
-    def __init__(self, port: Port, noise: float = 0.0, seed: int | None = None):
+class Sensor(Device):
+    def __init__(self, port: Port):
         '''
         Args:
             port (Port): Port the sensor is plugged into.
@@ -26,37 +26,27 @@ class Sensor(ABC, Device):
             seed (int): Seed for the noise, so noisy runs can be reproduced.
         '''
         super().__init__(port)
-        self._model = 
-        self._noise_std: float = noise
-        self._rng: random.Random = random.Random(seed)
 
-        self._x_mm = 0.0
-        self._y_mm = 0.0
-        self._z_mm = 0.0
-        self._yaw_deg = 0.0
-        self._pitch_deg = 0.0
-        self._roll_deg = 0.0
-
-    def _set_pose(self, x_mm: float, y_mm: float, z_mm: float, heading_deg: float) -> None:
-        '''
-        Called by whatever carries the sensor. Not part of the official API.
-        '''
-        self._x_mm, self._y_mm, self_y_mm, self._heading_deg = x_mm, y_mm, z_mm, heading_deg
-
-    def _noisy(self, value: float) -> float:
-        if self._noise_std > 0:
-            value += self._rng.gauss(0.0, self._noise_std)
-        return value
+    def set_pose(
+        self,
+        x_mm: float,
+        y_mm: float,
+        z_mm: float,
+        heading_deg: float,
+    ) -> None:
+        self._model.set_pose(x_mm, y_mm, z_mm, heading_deg)
 
 
 class ColorSensor(Sensor):
     '''
     LEGO SPIKE Color Sensor (reflection only for now).
     '''
+    def __init__(self, port: Port):
+        super().__init__(port)
+        self._model = ColorSensorModel()
 
     def reflection(self) -> int:
-        value = self.world.get_reflection_at(self._x_mm, self._y_mm)
-        return int(round(_clamp(self._noisy(value), 0, 100)))
+        return self._model.reflection()
 
     def ambient(self) -> int:
         raise NotImplementedError("ColorSensor.ambient() needs ambient light in the World")
@@ -72,15 +62,12 @@ class UltrasonicSensor(Sensor):
     '''
     LEGO SPIKE Ultrasonic Sensor. Looks along the heading of whatever carries it.
     '''
+    def __init__(self, port: Port):
+        super().__init__(port)
+        self._model = UltrasonicSensorModel()
 
     def distance(self) -> int:
         '''
         distance() -> int: mm. Returns 2000 when nothing is measured.
         '''
-        d = self.world.raycast_distance(self._x_mm, self._y_mm, self._yaw_deg,
-                                        MAX_DISTANCE_MM)
-        return int(round(_clamp(self._noisy(d), 0, MAX_DISTANCE_MM)))
-
-    def presence(self) -> bool:
-        # Other ultrasonic sensors are not simulated.
-        return False
+        return self._model.distance()

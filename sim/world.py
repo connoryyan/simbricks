@@ -67,6 +67,33 @@ class ScriptableWorld(World):
         return min(self._distance, max_mm)
 
 
+class LineWorld(FlatWhiteWorld):
+    '''
+    A straight black line along the x axis.
+    '''
+
+    def __init__(self, line_width_mm: float = 20.0):
+        super().__init__(reflection=85)
+        self.line_width_mm = line_width_mm
+        self.black_reflection = 10
+        self.edge_width_mm = 4.0
+
+    def get_reflection_at(self, x_mm: float, y_mm: float) -> int:
+        distance = abs(y_mm)
+        half_width = self.line_width_mm / 2.0
+
+        # Blend black into white across the line edge.
+        blend = (
+            distance - half_width + self.edge_width_mm / 2.0
+        ) / self.edge_width_mm
+        blend = max(0.0, min(1.0, blend))
+
+        return round(
+            self.black_reflection
+            + blend * (self.reflection - self.black_reflection)
+        )
+
+
 # Default field. When launching the sim it can be replaced.
 current_world: World = FlatWhiteWorld()
 

@@ -1,3 +1,4 @@
+
 from .model import Model
 
 
@@ -25,6 +26,8 @@ class MotorModel(Model):
         self._speed_dps: float = 0.0
         self._target_speed_dps: float = 0.0
         self._braking: bool = False
+
+        
 
     def step(self, dt_s: float) -> None:
         if self._braking:

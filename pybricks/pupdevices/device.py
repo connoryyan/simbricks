@@ -10,4 +10,4 @@ class Device(ABC):
 
     def __init__(self, port: Port):
         self.port = port
-        self._model: Model = Model()
+        self._model: Model | None = None

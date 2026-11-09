@@ -1,7 +1,7 @@
 import random
 from abc import ABC, abstractmethod
 
-from ..world import World, current_world
+from .. import world as world_module
 from .model import Model
 
 # What the ultrasonic sensor returns when nothing is measured.
@@ -12,8 +12,8 @@ def _clamp(value: float, low: float, high: float) -> float:
     return max(low, min(high, value))
 
 
-class SensorModel(ABC, Model):
-    def __init__(self, noise: float = 0.0, seed: int | None = None):
+class SensorModel(Model):
+    def __init__(self, time_constant_s: float = 0.15, noise: float = 0.0, seed: int | None = None):
         '''
         Args:
             noise (float): Standard deviation of Gaussian measurement noise, in the
@@ -21,6 +21,7 @@ class SensorModel(ABC, Model):
                 a perfect, fully deterministic sensor.
             seed (int): Seed for the noise, so noisy runs can be reproduced.
         '''
+        super().__init__(time_constant_s)
         self._noise_std: float = noise
         self._rng: random.Random = random.Random(seed)
 
@@ -31,11 +32,18 @@ class SensorModel(ABC, Model):
         self._pitch_deg = 0.0
         self._roll_deg = 0.0
 
-    def _set_pose(self, x_mm: float, y_mm: float, z_mm: float, heading_deg: float) -> None:
+    def step(self, dt_s: float) -> None:
+        pass
+
+    @property
+    def world(self) -> world_module.World:
+        return world_module.current_world
+
+    def set_pose(self, x_mm: float, y_mm: float, z_mm: float, heading_deg: float) -> None:
         '''
         Called by whatever carries the sensor. Not part of the official API.
         '''
-        self._x_mm, self._y_mm, self_y_mm, self._heading_deg = x_mm, y_mm, z_mm, heading_deg
+        self._x_mm, self._y_mm, self._z_mm, self._yaw_deg = x_mm, y_mm, z_mm, heading_deg
 
     def _noisy(self, value: float) -> float:
         if self._noise_std > 0:
@@ -43,28 +51,19 @@ class SensorModel(ABC, Model):
         return value
 
 
-class ColorSensor(Sensor):
+class ColorSensorModel(SensorModel):
     '''
-    LEGO SPIKE Color Sensor (reflection only for now).
+    Model to simulate LEGO SPIKE Color Sensor
     '''
 
     def reflection(self) -> int:
         value = self.world.get_reflection_at(self._x_mm, self._y_mm)
         return int(round(_clamp(self._noisy(value), 0, 100)))
 
-    def ambient(self) -> int:
-        raise NotImplementedError("ColorSensor.ambient() needs ambient light in the World")
 
-    def color(self):
-        raise NotImplementedError("ColorSensor.color() needs surface colors in the World")
-
-    def hsv(self):
-        raise NotImplementedError("ColorSensor.hsv() needs surface colors in the World")
-
-
-class UltrasonicSensor(Sensor):
+class UltrasonicSensorModel(SensorModel):
     '''
-    LEGO SPIKE Ultrasonic Sensor. Looks along the heading of whatever carries it.
+    Model to simulate LEGO SPIKE Ultrasonic Sensor. Looks along the heading of whatever carries it.
     '''
 
     def distance(self) -> int:
@@ -74,7 +73,3 @@ class UltrasonicSensor(Sensor):
         d = self.world.raycast_distance(self._x_mm, self._y_mm, self._yaw_deg,
                                         MAX_DISTANCE_MM)
         return int(round(_clamp(self._noisy(d), 0, MAX_DISTANCE_MM)))
-
-    def presence(self) -> bool:
-        # Other ultrasonic sensors are not simulated.
-        return False

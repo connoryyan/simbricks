@@ -1,7 +1,18 @@
-from .models import Model
+from typing import TYPE_CHECKING
+
+# Avoid circular imports.
+if TYPE_CHECKING:
+    from .models.model import Model
 
 
 STEP_MS = 5 # dt
+
+
+class NotSteppableError(Exception):
+    def __init__(self, 
+                 msg = "Object must have step() method"):
+        super().__init__(msg)
+        self.msg = msg
 
 
 class SimClock:
@@ -18,6 +29,9 @@ class SimClock:
         Arg:
             steppable (Model)
         '''
+        if not hasattr(steppable, "step"):
+            raise NotSteppableError()
+
         if steppable not in self._steppables:
             self._steppables.add(steppable)
 

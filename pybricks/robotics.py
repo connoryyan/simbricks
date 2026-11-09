@@ -62,7 +62,12 @@ class DriveBase:
         self._left = left_motor
         self._right = right_motor
         # The body model validates the geometry and registers itself on the clock.
-        self._model = DriveBaseModel(left_motor, right_motor, wheel_diameter, axle_track)
+        self._model = DriveBaseModel(
+            left_motor=left_motor,
+            right_motor=right_motor,
+            wheel_diameter=wheel_diameter,
+            axle_track=axle_track,
+        )
         self._mm_per_deg = self._model.mm_per_deg
         self._track = self._model.axle_track
         self.use_gyro = use_gyro
