@@ -9,7 +9,7 @@ class Sensor(Device):
         Create the sensor.
 
         Arg:
-        port (Port): Port the sensor is plugged into.
+            port (Port): Port the sensor is plugged into.
         '''
         super().__init__(port)
 
@@ -73,10 +73,22 @@ class ColorSensor(Sensor):
         self._model = ColorSensorModel()
 
     def reflection(self) -> int:
+        '''
+        Return reflected light from the surface seen by the sensor.
+
+        Returns:
+            int: Total signal from 0 to 100. Return ambient light without a surface hit.
+        '''
         return self._model.reflection()
 
     def ambient(self) -> int:
-        raise NotImplementedError("ColorSensor.ambient() needs ambient light in the World")
+        '''
+        Return ambient light without the active reflected signal.
+
+        Returns:
+            int: Ambient light from 0 to 100 in the simulated signal scale.
+        '''
+        return self._model.ambient()
 
     def color(self):
         raise NotImplementedError("ColorSensor.color() needs surface colors in the World")

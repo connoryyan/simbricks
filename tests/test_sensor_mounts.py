@@ -117,7 +117,7 @@ class SensorMountTests(unittest.TestCase):
         self.db.model.mount(ultrasonic.model, above_mm=22)
         field.set_reflection(20)
         field.set_distance(350)
-        self.assertEqual(color.reflection(), 20)
+        self.assertEqual(color.reflection(), 25)
         self.assertEqual(ultrasonic.distance(), 350)
 
 

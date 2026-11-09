@@ -87,14 +87,78 @@ class SensorModel(Model):
             value += self._rng.gauss(0.0, self._noise_std)
         return value
 
+    def view_direction(self) -> tuple[float, float, float]:
+        '''
+        Return the unit measurement direction in world coordinates.
+
+        Roll does not change the centre ray.
+
+        Returns:
+            tuple[float, float, float]: Direction along x, y and z.
+        '''
+        yaw = math.radians(self._yaw_deg)
+        pitch = math.radians(self._pitch_deg)
+        return (math.cos(pitch) * math.cos(yaw),
+                math.cos(pitch) * math.sin(yaw), -math.sin(pitch))
+
 
 class ColorSensorModel(SensorModel):
     '''
     Simulate a LEGO SPIKE color sensor.
     '''
 
+    def __init__(self, time_constant_s: float = 0.15, noise: float = 0.0,
+                 seed: int | None = None, *, reference_distance_mm: float = 10.0,
+                 max_distance_mm: float = 100.0):
+        '''
+        Create a colour sensor with a simple distance response.
+
+        Arg:
+            time_constant_s (float): Response time in seconds.
+            noise (float): Reflection noise standard deviation.
+            seed (int | None): Random seed for repeatable noise.
+            reference_distance_mm (float): Distance with full signal strength in mm.
+            max_distance_mm (float): Maximum surface distance in mm.
+        '''
+        if not all(math.isfinite(v) and v > 0
+                   for v in (reference_distance_mm, max_distance_mm)):
+            raise ValueError("Sensor distances must be finite and positive")
+        if reference_distance_mm > max_distance_mm:
+            raise ValueError("Reference distance cannot exceed maximum distance")
+        super().__init__(time_constant_s, noise, seed)
+        self.reference_distance_mm = reference_distance_mm
+        self.max_distance_mm = max_distance_mm
+
     def reflection(self) -> int:
-        value = self.world.get_reflection_at(self._x_mm, self._y_mm)
+        '''
+        Measure reflected light at the first surface along the centre ray.
+
+        Add ambient light to the active reflected signal.
+        Use a capped inverse-square distance response and cosine angle response.
+        This is a simple model for calibration, not a hardware response curve.
+
+        Returns:
+            int: Total signal from 0 to 100. Return ambient light without a surface hit.
+        '''
+        value = self.world.get_ambient_at(self._x_mm, self._y_mm, self._z_mm)
+        hit = self.world.raycast_surface(
+            self._x_mm, self._y_mm, self._z_mm,
+            *self.view_direction(), self.max_distance_mm,
+        )
+        if hit is not None:
+            strength = (1.0 if hit.distance_mm <= self.reference_distance_mm
+                        else (self.reference_distance_mm / hit.distance_mm) ** 2)
+            value += hit.reflection * strength * hit.incidence_cosine
+        return int(round(_clamp(self._noisy(value), 0, 100)))
+
+    def ambient(self) -> int:
+        '''
+        Measure ambient light without the active reflected signal.
+
+        Returns:
+            int: Ambient light from 0 to 100 in the simulated signal scale.
+        '''
+        value = self.world.get_ambient_at(self._x_mm, self._y_mm, self._z_mm)
         return int(round(_clamp(self._noisy(value), 0, 100)))
 
 
@@ -111,5 +175,6 @@ class UltrasonicSensorModel(SensorModel):
             int: Distance in mm. Return 2000 when no object is detected.
         '''
         d = self.world.raycast_distance(self._x_mm, self._y_mm, self._yaw_deg,
-                                        MAX_DISTANCE_MM)
+                                        MAX_DISTANCE_MM, z_mm=self._z_mm,
+                                        pitch_deg=self._pitch_deg)
         return int(round(_clamp(self._noisy(d), 0, MAX_DISTANCE_MM)))
