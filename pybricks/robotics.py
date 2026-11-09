@@ -4,6 +4,7 @@ from sim.clock import clock
 from sim.models import DriveBaseModel
 
 from .parameters import Stop
+from .pupdevices import Motor
 
 KP_DISTANCE = 3.0 # 1/s, feedback gain on distance error
 KP_ANGLE = 3.0 # 1/s, feedback gain on angle error
@@ -59,14 +60,18 @@ class _Maneuver:
 class DriveBase:
     def __init__(self, left_motor, right_motor, wheel_diameter: float,
                  axle_track: float, use_gyro: bool = False):
+        if not isinstance(left_motor, Motor) or not isinstance(right_motor, Motor):
+            raise TypeError("left_motor and right_motor must be Motor objects")
         self._left = left_motor
         self._right = right_motor
         # The body model validates the geometry and registers itself on the clock.
         self._model = DriveBaseModel(
-            left_motor=left_motor,
-            right_motor=right_motor,
+            left_model=left_motor.model,
+            right_model=right_motor.model,
             wheel_diameter=wheel_diameter,
             axle_track=axle_track,
+            left_sign=left_motor.positive_direction.value,
+            right_sign=right_motor.positive_direction.value,
         )
         self._mm_per_deg = self._model.mm_per_deg
         self._track = self._model.axle_track

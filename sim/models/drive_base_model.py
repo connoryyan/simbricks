@@ -1,23 +1,22 @@
 import math
 
 from sim.clock import clock
-from .model  import Model
+from .model import Model
+from .motor_model import MotorModel
 
 
 class DriveBaseModel(Model):
     def __init__(self, time_constant_s: float = 0.15,
-                 left_motor = None, right_motor = None,
-                 wheel_diameter: float = None, axle_track: float = None):
-
-        from pybricks.pupdevices import Motor
-        # Not putting on the top to avoid circular imports.
+                 left_model = None, right_model = None,
+                 wheel_diameter: float = None, axle_track: float = None,
+                 left_sign: int = 1, right_sign: int = 1):
         
-        if not isinstance(left_motor, Motor):
-            raise TypeError(f"Expected a Motor object but got "
-                            f"{left_motor.__class__.__name__}")
-        if not isinstance(right_motor, Motor):
-            raise TypeError(f"Expected a Motor object but got "
-                            f"{right_motor.__class__.__name__}")
+        if not isinstance(left_model, MotorModel):
+            raise TypeError(f"Expected a MotorModel object but got "
+                            f"{left_model.__class__.__name__}")
+        if not isinstance(right_model, MotorModel):
+            raise TypeError(f"Expected a MotorModel object but got "
+                            f"{right_model.__class__.__name__}")
 
         if not isinstance(wheel_diameter, (int, float)):
             raise TypeError(f"Expected int or float but got "
@@ -28,14 +27,19 @@ class DriveBaseModel(Model):
         
         if wheel_diameter <= 0 or axle_track <= 0:
             raise ValueError("wheel_diameter and axle_track must be positive")
-        if left_motor is right_motor:
-            raise ValueError("left_motor and right_motor must" \
-                             " be different motors")
+        if left_model is right_model:
+            raise ValueError("left_model and right_model must be different models")
+        if any(type(sign) is not int or sign not in (-1, 1)
+               for sign in (left_sign, right_sign)):
+            raise ValueError("Wheel direction signs must be -1 or 1")
 
         super().__init__(time_constant_s)
 
-        self._left: Motor = left_motor
-        self._right: Motor = right_motor
+        self._left: MotorModel = left_model
+        self._right: MotorModel = right_model
+        # Map raw motor rotation into each wheel's forward direction.
+        self._left_sign = left_sign
+        self._right_sign = right_sign
         # wheel rim travel per wheel degree
         self.mm_per_deg: float = math.pi * wheel_diameter / 360.0
         self.wheel_diameter: float = wheel_diameter
@@ -51,8 +55,8 @@ class DriveBaseModel(Model):
         self.distance_mm = 0.0
         self.angle_deg = 0.0       # clockwise positive
 
-        self._last_l: float = left_motor.angle()
-        self._last_r: float = right_motor.angle()
+        self._last_l: float = left_model.angle * left_sign
+        self._last_r: float = right_model.angle * right_sign
         self._mounts: list = []
 
     def step(self, dt_s: float) -> None:
@@ -60,7 +64,8 @@ class DriveBaseModel(Model):
         self._update_mounts()
 
     def _update_odometry(self) -> None:
-        l, r = self._left.angle(), self._right.angle()
+        l = self._left.angle * self._left_sign
+        r = self._right.angle * self._right_sign
         dl = (l - self._last_l) * self.mm_per_deg
         dr = (r - self._last_r) * self.mm_per_deg
         self._last_l, self._last_r = l, r
@@ -92,8 +97,8 @@ class DriveBaseModel(Model):
         Returns:
             float: Speed of the robot in mm/s.
         '''
-        vl = self._left.speed() * self.mm_per_deg
-        vr = self._right.speed() * self.mm_per_deg
+        vl = self._left.speed * self._left_sign * self.mm_per_deg
+        vr = self._right.speed * self._right_sign * self.mm_per_deg
         return (vl + vr) / 2.0
 
     def turn_rate_dps(self) -> float:
@@ -103,8 +108,8 @@ class DriveBaseModel(Model):
         Returns:
             float: Turn rate in deg/s, clockwise positive.
         '''
-        vl = self._left.speed() * self.mm_per_deg
-        vr = self._right.speed() * self.mm_per_deg
+        vl = self._left.speed * self._left_sign * self.mm_per_deg
+        vr = self._right.speed * self._right_sign * self.mm_per_deg
         return math.degrees((vl - vr) / self.axle_track)
 
     def place(self, x_mm: float, y_mm: float, 

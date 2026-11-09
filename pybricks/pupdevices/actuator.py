@@ -44,7 +44,7 @@ def _effective_gear_ratio(gears: list[int] | list[list[int]]) -> float:
     return chain_ratio(gears)
 
 
-class Actuator(Device, ABC):
+class Actuator(Device):
     '''
     Motor class ABC
     '''
@@ -98,6 +98,19 @@ class Motor(DCMotor):
                  positive_direction: Direction = Direction.CLOCKWISE):
         super().__init__(port, positive_direction)
 
+        self._angle_offset = 0.0
+        self._action = None
+        self._last_action_error = None
+
+    @property
+    def model(self) -> MotorModel:
+        """Physical motor model (simulator-only)."""
+        return self._model
+
+    @property
+    def positive_direction(self) -> Direction:
+        return self._direction
+
     def run(self, speed: float):
         self._model.run(self._direction.value * speed)
 
@@ -132,15 +145,17 @@ class Motor(DCMotor):
         elif then == Stop.HOLD:
             self.brake() # Leave hold later
 
-    def angle(self):
+    def _physical_angle(self) -> float:
         return self._direction.value * self._model.get_angle()
+
+    def angle(self):
+        return self._physical_angle() - self._angle_offset
 
     def speed(self):
         return self._direction.value * self._model.get_speed()
 
-    def reset_angle(self, angle=None):
-        self._model.angle = (0.0 if angle is None 
-                             else self._direction.value * angle)
+    def reset_angle(self, angle: float = 0.0) -> None:
+        self._angle_offset = self._physical_angle() - float(angle)
     
     def stalled(self) -> bool:
         return self._model.is_stalled()

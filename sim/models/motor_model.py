@@ -59,13 +59,13 @@ class MotorModel(Model):
         self._braking = True
         self._target_speed_dps = 0.0
 
-    def set_angle(self, angle_deg: float = 0.0) -> None:
-        self._angle_deg = angle_deg
+    # def set_angle(self, angle_deg: float = 0.0) -> None:
+    #     self._angle_deg = angle_deg
 
     def get_angle(self) -> float:
         return self._angle_deg
 
-    angle = property(get_angle, set_angle)
+    angle = property(get_angle)
 
     def get_speed(self) -> float:
         return self._speed_dps
