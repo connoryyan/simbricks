@@ -1,45 +1,72 @@
-import random
-from abc import ABC, abstractmethod
-
 from sim.models import SensorModel, ColorSensorModel, UltrasonicSensorModel
 
 from ..parameters import Port
 from .device import Device
 
-# What the ultrasonic sensor returns when nothing is measured.
-MAX_DISTANCE_MM = 2000 # 2m
-
-
-def _clamp(value: float, low: float, high: float) -> float:
-    return max(low, min(high, value))
-
-
 class Sensor(Device):
     def __init__(self, port: Port):
         '''
-        Args:
-            port (Port): Port the sensor is plugged into.
-            world (World) : Use this world instead of the global one (handy in tests).
-            noise (float): Standard deviation of Gaussian measurement noise, in the
-                sensor's own unit (% for reflection, mm for distance). 0 means
-                a perfect, fully deterministic sensor.
-            seed (int): Seed for the noise, so noisy runs can be reproduced.
+        Create the sensor.
+
+        Arg:
+        port (Port): Port the sensor is plugged into.
         '''
         super().__init__(port)
+
+    @property
+    def model(self) -> SensorModel:
+        '''
+        Return the sensor model for the simulator.
+        '''
+        if not isinstance(self._model, SensorModel):
+            raise TypeError("Sensor has no sensor model")
+        return self._model
 
     def set_pose(
         self,
         x_mm: float,
         y_mm: float,
         z_mm: float,
-        heading_deg: float,
+        yaw_deg: float,
     ) -> None:
-        self._model.set_pose(x_mm, y_mm, z_mm, heading_deg)
+        '''
+        Set the world position and yaw of the sensor.
+
+        Keep the fixed pitch and roll unchanged. Use this method in the simulator.
+
+        Arg:
+            x_mm (float): World x coordinate in mm.
+            y_mm (float): World y coordinate in mm.
+            z_mm (float): Height above the ground in mm.
+            yaw_deg (float): Counter-clockwise angle from the world x axis in degrees.
+        '''
+        self.model.set_pose(x_mm, y_mm, z_mm, yaw_deg)
+
+    def set_tilt(self, pitch_deg: float = 0.0, roll_deg: float = 0.0) -> None:
+        '''
+        Set the fixed tilt of the sensor.
+
+        Use Rz(yaw) * Ry(pitch) * Rx(roll) for rotation.
+
+        Arg:
+            pitch_deg (float): Downward pitch in degrees.
+            roll_deg (float): Roll in degrees by the right hand rule.
+        '''
+        self.model.set_tilt(pitch_deg, roll_deg)
+
+    def pose(self) -> tuple[float, float, float, float, float, float]:
+        '''
+        Return the world pose of the sensor.
+
+        Returns:
+            tuple[float, float, float, float, float, float]: x, y, z in mm, then yaw, pitch and roll in degrees.
+        '''
+        return self.model.pose()
 
 
 class ColorSensor(Sensor):
     '''
-    LEGO SPIKE Color Sensor (reflection only for now).
+    Represent a LEGO SPIKE color sensor.
     '''
     def __init__(self, port: Port):
         super().__init__(port)
@@ -60,7 +87,7 @@ class ColorSensor(Sensor):
 
 class UltrasonicSensor(Sensor):
     '''
-    LEGO SPIKE Ultrasonic Sensor. Looks along the heading of whatever carries it.
+    Represent a LEGO SPIKE ultrasonic sensor.
     '''
     def __init__(self, port: Port):
         super().__init__(port)
@@ -68,6 +95,9 @@ class UltrasonicSensor(Sensor):
 
     def distance(self) -> int:
         '''
-        distance() -> int: mm. Returns 2000 when nothing is measured.
+        Return the measured distance.
+
+        Returns:
+            int: Distance in mm. Return 2000 when no object is detected.
         '''
         return self._model.distance()

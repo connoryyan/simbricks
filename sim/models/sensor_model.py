@@ -1,5 +1,5 @@
+import math
 import random
-from abc import ABC, abstractmethod
 
 from .. import world as world_module
 from .model import Model
@@ -15,11 +15,12 @@ def _clamp(value: float, low: float, high: float) -> float:
 class SensorModel(Model):
     def __init__(self, time_constant_s: float = 0.15, noise: float = 0.0, seed: int | None = None):
         '''
-        Args:
-            noise (float): Standard deviation of Gaussian measurement noise, in the
-                sensor's own unit (% for reflection, mm for distance). 0 means
-                a perfect, fully deterministic sensor.
-            seed (int): Seed for the noise, so noisy runs can be reproduced.
+        Create a sensor model.
+
+        Arg:
+            time_constant_s (float): Response time in seconds.
+            noise (float): Noise standard deviation in sensor units. Zero disables noise.
+            seed (int | None): Random seed for repeatable noise.
         '''
         super().__init__(time_constant_s)
         self._noise_std: float = noise
@@ -39,11 +40,47 @@ class SensorModel(Model):
     def world(self) -> world_module.World:
         return world_module.current_world
 
-    def set_pose(self, x_mm: float, y_mm: float, z_mm: float, heading_deg: float) -> None:
+    def set_pose(self, x_mm: float, y_mm: float, z_mm: float, yaw_deg: float) -> None:
         '''
-        Called by whatever carries the sensor. Not part of the official API.
+        Set the world position and yaw of the sensor.
+
+        Keep the fixed pitch and roll unchanged. Use this method in the simulator.
+
+        Arg:
+            x_mm (float): World x coordinate in mm.
+            y_mm (float): World y coordinate in mm.
+            z_mm (float): Height above the ground in mm.
+            yaw_deg (float): Counter-clockwise angle from the world x axis in degrees.
         '''
-        self._x_mm, self._y_mm, self._z_mm, self._yaw_deg = x_mm, y_mm, z_mm, heading_deg
+        values = tuple(float(v) for v in (x_mm, y_mm, z_mm, yaw_deg))
+        if not all(math.isfinite(v) for v in values) or values[2] < 0:
+            raise ValueError("Sensor pose must be finite and above or on the ground")
+        self._x_mm, self._y_mm, self._z_mm, self._yaw_deg = values
+
+    def set_tilt(self, pitch_deg: float = 0.0, roll_deg: float = 0.0) -> None:
+        '''
+        Set the fixed tilt of the sensor.
+
+        Use Rz(yaw) * Ry(pitch) * Rx(roll) for rotation.
+
+        Arg:
+            pitch_deg (float): Downward pitch in degrees.
+            roll_deg (float): Roll in degrees by the right hand rule.
+        '''
+        values = tuple(float(v) for v in (pitch_deg, roll_deg))
+        if not all(math.isfinite(v) for v in values):
+            raise ValueError("Sensor tilt must be finite")
+        self._pitch_deg, self._roll_deg = values
+
+    def pose(self) -> tuple[float, float, float, float, float, float]:
+        '''
+        Return the world pose of the sensor.
+
+        Returns:
+            tuple[float, float, float, float, float, float]: x, y, z in mm, then yaw, pitch and roll in degrees.
+        '''
+        return (self._x_mm, self._y_mm, self._z_mm,
+                self._yaw_deg, self._pitch_deg, self._roll_deg)
 
     def _noisy(self, value: float) -> float:
         if self._noise_std > 0:
@@ -53,7 +90,7 @@ class SensorModel(Model):
 
 class ColorSensorModel(SensorModel):
     '''
-    Model to simulate LEGO SPIKE Color Sensor
+    Simulate a LEGO SPIKE color sensor.
     '''
 
     def reflection(self) -> int:
@@ -63,12 +100,15 @@ class ColorSensorModel(SensorModel):
 
 class UltrasonicSensorModel(SensorModel):
     '''
-    Model to simulate LEGO SPIKE Ultrasonic Sensor. Looks along the heading of whatever carries it.
+    Simulate a LEGO SPIKE ultrasonic sensor.
     '''
 
     def distance(self) -> int:
         '''
-        distance() -> int: mm. Returns 2000 when nothing is measured.
+        Return the measured distance.
+
+        Returns:
+            int: Distance in mm. Return 2000 when no object is detected.
         '''
         d = self.world.raycast_distance(self._x_mm, self._y_mm, self._yaw_deg,
                                         MAX_DISTANCE_MM)

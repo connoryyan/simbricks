@@ -1,11 +1,24 @@
 import math
+from dataclasses import dataclass
 
 from sim.clock import clock
 from .model import Model
 from .motor_model import MotorModel
+from .sensor_model import SensorModel
+
+
+@dataclass(frozen=True)
+class _SensorMount:
+    model: SensorModel
+    forward_mm: float
+    left_mm: float
+    z_mm: float
+    yaw_deg: float
 
 
 class DriveBaseModel(Model):
+    step_priority = 1
+
     def __init__(self, time_constant_s: float = 0.15,
                  left_model = None, right_model = None,
                  wheel_diameter: float = None, axle_track: float = None,
@@ -57,7 +70,7 @@ class DriveBaseModel(Model):
 
         self._last_l: float = left_model.angle * left_sign
         self._last_r: float = right_model.angle * right_sign
-        self._mounts: list = []
+        self._mounts: list[_SensorMount] = []
 
     def step(self, dt_s: float) -> None:
         self._update_odometry()
@@ -83,16 +96,16 @@ class DriveBaseModel(Model):
 
     def pose(self) -> tuple[float, float, float]:
         '''
-        Return the true pose of the robot (x_mm, y_mm, heading_deg counter-clockwise).
+        Return the world pose of the robot.
 
         Returns:
-            tuple[float, float, float]: True pose of the robot (x/mm, y/mm, heading/deg counter-clockwise).
+            tuple[float, float, float]: x and y in mm, then counter-clockwise heading in degrees.
         '''
         return self.x_mm, self.y_mm, math.degrees(self.heading_rad)
 
     def speed_mm_s(self) -> float:
         '''
-        Current forward speed of the body, from the motors' speeds.
+        Return the forward speed of the body.
 
         Returns:
             float: Speed of the robot in mm/s.
@@ -103,7 +116,7 @@ class DriveBaseModel(Model):
 
     def turn_rate_dps(self) -> float:
         '''
-        Current turn rate in deg/s, clockwise positive.
+        Return the clockwise turn rate of the body.
 
         Returns:
             float: Turn rate in deg/s, clockwise positive.
@@ -115,33 +128,62 @@ class DriveBaseModel(Model):
     def place(self, x_mm: float, y_mm: float, 
               heading_deg: float = 0.0) -> None:
         '''
-        Put the robot somewhere in the world (heading counter-clockwise from +x).
+        Set the world position and counter-clockwise heading of the robot.
         '''
+        if not all(math.isfinite(v) for v in (x_mm, y_mm, heading_deg)):
+            raise ValueError("Robot pose must be finite")
         self.x_mm, self.y_mm = x_mm, y_mm
         self.heading_rad = math.radians(heading_deg)
         self._update_mounts()
 
-    def mount(self, sensor, 
-              forward_mm: float = 0.0, 
+    def mount(self, sensor_model: SensorModel,
+              forward_mm: float = 0.0,
               left_mm: float = 0.0,
-              above_mm: float = 0.0) -> None:
+              above_mm: float = 0.0,
+              yaw_deg: float = 0.0,
+              pitch_deg: float = 0.0,
+              roll_deg: float = 0.0) -> None:
         '''
-        Attach a sensor at an offset from the axle center.
+        Attach a sensor model to the body.
+
+        Measure offsets from the axle centre. Keep pitch and roll fixed during motion.
+        World height is half the wheel diameter plus above_mm.
+
+        Arg:
+            sensor_model (SensorModel): Sensor model to attach.
+            forward_mm (float): Forward offset in mm.
+            left_mm (float): Left offset in mm.
+            above_mm (float): Upward offset from the axle centre in mm.
+            yaw_deg (float): Counter-clockwise yaw relative to the body in degrees.
+            pitch_deg (float): Downward pitch in degrees.
+            roll_deg (float): Roll in degrees by the right hand rule.
         '''
-        self._mounts.append((sensor, forward_mm, left_mm, above_mm))
+        if not isinstance(sensor_model, SensorModel):
+            raise TypeError("sensor_model must be a SensorModel")
+        if any(m.model is sensor_model for m in self._mounts):
+            raise ValueError("Sensor model is already mounted on this body")
+        values = tuple(float(v) for v in
+                       (forward_mm, left_mm, above_mm, yaw_deg, pitch_deg, roll_deg))
+        if not all(math.isfinite(v) for v in values):
+            raise ValueError("Mount values must be finite")
+        forward, left, above, yaw, pitch, roll = values
+        z = self.wheel_diameter / 2.0 + above
+        if z < 0:
+            raise ValueError("Sensor cannot be below the ground")
+        sensor_model.set_tilt(pitch, roll)
+        self._mounts.append(_SensorMount(sensor_model, forward, left, z, yaw))
         self._update_mounts()
 
     def _update_mounts(self) -> None:
         c, s = math.cos(self.heading_rad), math.sin(self.heading_rad)
         heading_deg = math.degrees(self.heading_rad)
-        for sensor, forward, left, above in self._mounts:
-            x = self.x_mm + forward * c - left * s
-            y = self.y_mm + forward * s + left * c
-            z = self.wheel_diameter / 2 + above
-            sensor.set_pose(x, y, z, heading_deg)
+        for mount in self._mounts:
+            x = self.x_mm + mount.forward_mm * c - mount.left_mm * s
+            y = self.y_mm + mount.forward_mm * s + mount.left_mm * c
+            mount.model.set_pose(x, y, mount.z_mm, heading_deg + mount.yaw_deg)
 
     def detach(self) -> None:
         '''
-        Stop updating this model (it is removed from the clock).
+        Remove the model from the clock.
         '''
         clock.remove_steppable(self)

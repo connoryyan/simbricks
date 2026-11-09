@@ -1,3 +1,4 @@
+import math
 from abc import ABC, abstractmethod
 
 from ..parameters import Direction, Port, Stop
@@ -13,11 +14,13 @@ def _is_int(num):
 
 def _effective_gear_ratio(gears: list[int] | list[list[int]]) -> float:
     '''
-    Calculate gear ratio from a given gears parameter
+    Calculate the gear ratio of a gear chain.
 
-    Args:
-        gears (Collection): parameters of a gear chain (e.g. [12, 36] or 
-                            [[12, 36], [20, 16, 40]])
+    Arg:
+        gears (list[int] | list[list[int]]): Gear teeth in one or more chains.
+
+    Returns:
+        float: Output gear teeth divided by input gear teeth across all chains.
     '''
     if gears is None or not isinstance(gears, list):
         return 1.0
@@ -46,7 +49,7 @@ def _effective_gear_ratio(gears: list[int] | list[list[int]]) -> float:
 
 class Actuator(Device):
     '''
-    Motor class ABC
+    Define a motor device.
     '''
 
     def __init__(self, port: Port,
@@ -66,17 +69,15 @@ class Actuator(Device):
 
 class DCMotor(Actuator):
     '''
-    Motor without angle feedback.
+    Represent a motor without angle feedback.
     '''
 
     def __init__(self, port: Port, positive_direction: Direction = Direction.CLOCKWISE):
         super().__init__(port, positive_direction)
-        self._model = MotorModel()
-        # clock.register(self._model)
 
     def dc(self, duty: float) -> None:
         '''
-        Run DC motor
+        Run the motor at a duty cycle.
         '''
         sign = self._direction.value
         speed = sign * duty / 100.0 * self._model.max_speed_dps
@@ -91,7 +92,7 @@ class DCMotor(Actuator):
 
 class Motor(DCMotor):
     '''
-    Motor with angle feedback.
+    Represent a motor with angle feedback.
     '''
 
     def __init__(self, port: Port, 
@@ -104,7 +105,9 @@ class Motor(DCMotor):
 
     @property
     def model(self) -> MotorModel:
-        """Physical motor model (simulator-only)."""
+        '''
+        Return the motor model for the simulator.
+        '''
         return self._model
 
     @property
@@ -112,10 +115,16 @@ class Motor(DCMotor):
         return self._direction
 
     def run(self, speed: float):
+        if not math.isfinite(speed):
+            raise ValueError("speed must be finite")
         self._model.run(self._direction.value * speed)
 
     def run_time(self, speed: float, time: float, 
-                 then: Stop = None, wait: bool = True):
+                 then: Stop = Stop.HOLD, wait: bool = True):
+        if not isinstance(then, Stop):
+            raise ValueError("Unsupported stop mode")
+        if not math.isfinite(time) or time < 0:
+            raise ValueError("time must be finite and non-negative")
         self.run(speed)
 
         if wait:
@@ -123,27 +132,61 @@ class Motor(DCMotor):
             self._apply_then(then)
 
     def run_angle(self, speed: float, angle: float, 
-                  then: Stop = None, wait: bool = True):
-        direction = (1 if speed >= 0 else -1) * (1 if angle >= 0 else -1)
-        self.run(direction * abs(speed))
+                  then: Stop = Stop.HOLD, wait: bool = True) -> None:
+        '''
+        Run the motor through an angle.
 
-        start_angle = self._model.get_angle()
+        Arg:
+            speed (float): Motor speed in deg/s.
+            angle (float): Rotation angle in degrees.
+            then (Stop): Stop mode after the move.
+            wait (bool): Wait for the move to finish. Automatic completion requires True.
+        '''
+        if not isinstance(then, Stop):
+            raise ValueError("Unsupported stop mode")
+        if not math.isfinite(speed) or not math.isfinite(angle):
+            raise ValueError("speed and angle must be finite")
+        if angle != 0 and speed == 0:
+            raise ValueError("speed must be non-zero")
+
+        direction = (1 if speed >= 0 else -1) * (1 if angle >= 0 else -1)
+
+        start = self._physical_angle()
+        target = start + direction * abs(angle)
 
         def reached() -> bool:
-            traveled = (self._model.get_angle() - start_angle) * direction
-            return traveled >= abs(angle)
+            return (self._physical_angle() - target) * direction >= 0
+
+        if angle == 0:
+            self._apply_then(then, target_physical=start)
+            return
+
+        if angle != 0:
+            self.run(direction * abs(speed))
 
         if wait:
-            clock.advance_until(reached, timeout_ms=60_000)
-            self._apply_then(then)
+            completed = clock.advance_until(reached, timeout_ms=60_000)
+            if not completed:
+                self.brake()
+                raise TimeoutError("Motor move timed out")
 
-    def _apply_then(self, then: Stop) -> None:
+            self._apply_then(then, target_physical=target)
+
+    def _apply_then(self, then: Stop,
+                    target_physical: float | None = None) -> None:
         if then == Stop.BRAKE:
             self.brake()
         elif then == Stop.COAST or then == Stop.COAST_SMART:
             self.stop()
         elif then == Stop.HOLD:
-            self.brake() # Leave hold later
+            raw_target = (
+                None
+                if target_physical is None
+                else self._direction.value * target_physical
+            )
+            self._model.hold(raw_target)
+        else:
+            raise ValueError("Unsupported stop mode")
 
     def _physical_angle(self) -> float:
         return self._direction.value * self._model.get_angle()
@@ -159,3 +202,7 @@ class Motor(DCMotor):
     
     def stalled(self) -> bool:
         return self._model.is_stalled()
+
+    def hold(self) -> None:
+        self._action = None
+        self._model.hold()

@@ -4,7 +4,7 @@ from .model import Model
 
 class MotorModel(Model):
     '''
-    Simulate a motor
+    Simulate a motor.
     '''
     def __init__(
             self,
@@ -13,10 +13,12 @@ class MotorModel(Model):
             gear_ratio: float = 1.0
         ):
         '''
-        Args:
-            time_constant_s (float): Responding time (second)
-            max_speed_dps (float): Maximum motor output speed (degree / seconds)
-            gear_ratio (float): Given that output axis rotates 1 revolution, how many rotation the motor rotates
+        Create the model.
+
+        Arg:
+        time_constant_s (float): Response time in seconds.
+        max_speed_dps (float): Maximum motor speed in deg/s.
+        gear_ratio (float): Motor revolutions per output revolution.
         '''
         super().__init__(time_constant_s)
         self.max_speed_dps: float = max_speed_dps
@@ -26,10 +28,17 @@ class MotorModel(Model):
         self._speed_dps: float = 0.0
         self._target_speed_dps: float = 0.0
         self._braking: bool = False
-
-        
+        self._hold_angle_deg = None
 
     def step(self, dt_s: float) -> None:
+        if self._hold_angle_deg is not None:
+            error = self._hold_angle_deg - self._angle_deg
+            requested_speed = 10.0 * error
+            self._target_speed_dps = max(
+                -self.max_speed_dps,
+                min(self.max_speed_dps, requested_speed),
+            )
+
         if self._braking:
             alpha = min(1.0, dt_s / max(self.time_constant_s * 0.3, 1e-6)) # damping coefficient
             self._speed_dps += -self._speed_dps * alpha # exponential
@@ -41,21 +50,24 @@ class MotorModel(Model):
         self._angle_deg += self._speed_dps * dt_s
 
     def run(self, speed_dps: float) -> None:
+        self._hold_angle_deg = None
         self._braking = False
         clamped = max(-self.max_speed_dps, min(self.max_speed_dps, speed_dps))
         self._target_speed_dps = clamped
 
     def stop(self) -> None:
         '''
-        Release motor
+        Release the motor.
         '''
+        self._hold_angle_deg = None
         self._braking = False
         self._target_speed_dps = 0.0
     
     def brake(self) -> None:
         '''
-        Brake the motor with electronic resistance
+        Brake the motor with electrical resistance.
         '''
+        self._hold_angle_deg = None
         self._braking = True
         self._target_speed_dps = 0.0
 
@@ -74,5 +86,11 @@ class MotorModel(Model):
 
     def is_stalled(self, speed_threshold_dps: float = 1.0) -> bool:
         return abs(self._target_speed_dps) > speed_threshold_dps and abs(self._speed_dps) < speed_threshold_dps
+
+    def hold(self, angle_deg: float | None = None) -> None:
+        self._braking = False
+        self._hold_angle_deg = (
+            self._angle_deg if angle_deg is None else float(angle_deg)
+        )
 
     

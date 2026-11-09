@@ -5,34 +5,37 @@ class World(ABC):
     @abstractmethod
     def get_reflection_at(self, x_mm: float, y_mm: float) -> int:
         '''
-        Reflection at a certain point on the gaming field
+        Return the ground reflection at a point.
 
-        Args:
+        Arg:
             x_mm (float): x coordinate in mm.
             y_mm (float): y coordinate in mm.
 
         Returns:
-            int: Reflection at (x, y)
+            int: Ground reflection from 0 to 100.
         '''
         raise NotImplementedError
 
     @abstractmethod
     def raycast_distance(self, x_mm: float, y_mm: float, heading_deg: float, max_mm: float = 2000) -> float:
         '''
-        Distance between point (x, y) and the nearest object at the direction of heading_deg
+        Return the distance to the nearest object along a ray.
 
-        Args:
+        Arg:
             x_mm (float): x coordinate in mm.
             y_mm (float): y coordinate in mm.
-            heading_deg (int): direction where the object is expected to be detected.
+            heading_deg (float): Counter-clockwise ray direction in degrees.
             max_mm (float): When no object is detected, return this value.
+
+        Returns:
+            float: Distance in mm, or max_mm when no object is detected.
         '''
         raise NotImplementedError
 
 
 class FlatWhiteWorld(World):
     '''
-    A placeholder gaming field with white surface and no obstacles.
+    Simulate a white field with no obstacles.
     '''
 
     def __init__(self, reflection: int = 85):
@@ -47,7 +50,7 @@ class FlatWhiteWorld(World):
 
 class ScriptableWorld(World):
     '''
-    Tunable gaming field mainly for testing.
+    Provide fixed sensor readings for tests.
     '''
 
     def __init__(self):
@@ -69,7 +72,7 @@ class ScriptableWorld(World):
 
 class LineWorld(FlatWhiteWorld):
     '''
-    A straight black line along the x axis.
+    Simulate a straight black line along the x axis.
     '''
 
     def __init__(self, line_width_mm: float = 20.0):

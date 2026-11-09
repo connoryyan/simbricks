@@ -24,10 +24,10 @@ class SimClock:
 
     def add_steppable(self, steppable) -> None:
         '''
-        Add a device which needs to be updated every frame
+        Add a device which needs to be updated every frame.
 
         Arg:
-            steppable (Model)
+            steppable (Model): An object with step() method.
         '''
         if not hasattr(steppable, "step"):
             raise NotSteppableError()
@@ -44,7 +44,11 @@ class SimClock:
         Advance every device by dt_ms.
         '''
         dt_s = dt_ms / 1000.0
-        for s in list(self._steppables):  # copy: devices may be removed during a step
+        # Snapshot the set; devices may be removed during a step. Complete all
+        # motor updates before odometry, then let controllers issue commands
+        # for the next tick. Same-priority devices must be independent.
+        for s in sorted(self._steppables,
+                        key=lambda device: getattr(device, "step_priority", 0)):
             s.step(dt_s)
         self.time_ms += dt_ms
 

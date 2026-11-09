@@ -5,13 +5,18 @@ from ..clock import clock
 
 class Model(ABC):
     '''
-    An abstract class of the model of a device.
+    Define a device model.
     '''
+
+    # Independent physical devices are stepped before bodies and controllers.
+    step_priority = 0
 
     def __init__(self, time_constant_s: float = 0.15):
         '''
-        Args:
-            time_constant_s (float): Responding time (second)
+        Create the model.
+
+        Arg:
+        time_constant_s (float): Response time in seconds.
         '''
         self._time_constant_s: float = time_constant_s
         clock.add_steppable(self)

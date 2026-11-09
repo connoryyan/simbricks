@@ -15,6 +15,11 @@ SETTLE_TIMEOUT_S = 3.0 # give up this long after the planned end of a move
 
 class _Profile:
     def __init__(self, total: float, vmax: float, accel: float):
+        if not all(math.isfinite(v) for v in (total, vmax, accel)):
+            raise ValueError("Profile values must be finite")
+        if vmax <= 0 or accel <= 0:
+            raise ValueError("vmax and accel must be positive")
+
         self.sign = 1.0 if total >= 0 else -1.0
         self.dist = abs(total)
         self.accel = accel
@@ -45,7 +50,7 @@ class _Profile:
 
 class _Maneuver:
     '''
-    One straight() or turn() in progress.
+    Store a straight or turn action.
     '''
 
     def __init__(self, d0, a0, dist_profile, angle_profile, then):
@@ -58,6 +63,8 @@ class _Maneuver:
 
 
 class DriveBase:
+    step_priority = 2
+
     def __init__(self, left_motor, right_motor, wheel_diameter: float,
                  axle_track: float, use_gyro: bool = False):
         if not isinstance(left_motor, Motor) or not isinstance(right_motor, Motor):
@@ -93,7 +100,9 @@ class DriveBase:
 
     @property
     def model(self) -> DriveBaseModel:
-        """The body model (simulator-only), e.g. for a renderer."""
+        '''
+        Return the body model for the simulator.
+        '''
         return self._model
 
     # Odometry as Pybricks reports it: the model's running totals minus the
@@ -131,9 +140,9 @@ class DriveBase:
 
     def _set_wheels(self, speed_mm_s: float, turn_rate_dps: float) -> None:
         '''
-        Convert body speed and turn rate (clockwise positive) into wheel commands.
+        Convert body speed and clockwise turn rate into wheel commands.
 
-        Args:
+        Arg:
             speed_mm_s (float): Body speed in mm/s.
             turn_rate_dps (float): Body turn rate in deg/s.
         '''
@@ -218,9 +227,6 @@ class DriveBase:
 
     def pose(self) -> tuple[float, float, float]:
         return self._model.pose()
-
-    def mount(self, sensor, forward_mm: float = 0.0, left_mm: float = 0.0) -> None:
-        self._model.mount(sensor, forward_mm, left_mm)
 
     def _start(self, distance: float, angle: float, then: Stop, wait: bool) -> None:
         # Hold the other axis at its starting value (straight keeps heading,
