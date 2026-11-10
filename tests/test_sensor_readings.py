@@ -1,9 +1,12 @@
+from maps.straight_line.world import LineWorld
+from maps.scriptable.world import ScriptableWorld
+from maps.flat_white.world import FlatWhiteWorld
 import math
 import unittest
 
 from pybricks.parameters import Port
 from pybricks.pupdevices import ColorSensor, UltrasonicSensor
-from sim import world
+import world
 from sim.clock import clock
 from sim.models import ColorSensorModel
 
@@ -13,7 +16,7 @@ class SensorReadingTests(unittest.TestCase):
         self.previous_models = clock._steppables.copy()
         self.previous_world = world.current_world
         clock._steppables.clear()
-        world.current_world = world.FlatWhiteWorld(ambient_light=0)
+        world.current_world = FlatWhiteWorld(ambient_light=0)
 
     def tearDown(self):
         clock._steppables.clear()
@@ -38,7 +41,7 @@ class SensorReadingTests(unittest.TestCase):
         self.assertEqual(self.color_at(10, 30).reflection(), 11)
 
     def test_sensor_looks_at_ray_hit_instead_of_point_below_it(self):
-        world.current_world = world.LineWorld(ambient_light=0)
+        world.current_world = LineWorld(ambient_light=0)
         sensor = self.color_at(10, 45, -90, y=15)
         self.assertEqual(sensor.reflection(), 4)
         sensor.set_pose(0, 15, 10, 90)
@@ -114,7 +117,7 @@ class SensorReadingTests(unittest.TestCase):
         self.assertEqual(sensor.distance(), 2000)
 
     def test_no_surface_returns_configured_ambient_light(self):
-        world.current_world = world.FlatWhiteWorld(ambient_light=17)
+        world.current_world = FlatWhiteWorld(ambient_light=17)
         for height, pitch in ((10, 0), (10, -90), (101, 90), (80, 30)):
             with self.subTest(height=height, pitch=pitch):
                 sensor = self.color_at(height, pitch)
@@ -122,7 +125,7 @@ class SensorReadingTests(unittest.TestCase):
                 self.assertEqual(sensor.ambient(), 17)
 
     def test_active_signal_fades_towards_ambient(self):
-        world.current_world = world.FlatWhiteWorld(ambient_light=10)
+        world.current_world = FlatWhiteWorld(ambient_light=10)
         sensor = self.color_at(10)
         self.assertEqual(sensor.reflection(), 95)
         self.assertEqual(sensor.ambient(), 10)
@@ -132,11 +135,11 @@ class SensorReadingTests(unittest.TestCase):
         self.assertEqual(sensor.reflection(), 10)
         world.current_world.ambient_light = 25
         self.assertEqual(sensor.reflection(), 25)
-        world.current_world = world.LineWorld(ambient_light=12)
+        world.current_world = LineWorld(ambient_light=12)
         self.assertEqual(sensor.ambient(), 12)
 
     def test_ambient_and_total_signal_are_bounded(self):
-        world.current_world = world.FlatWhiteWorld(ambient_light=40)
+        world.current_world = FlatWhiteWorld(ambient_light=40)
         sensor = self.color_at(10)
         self.assertEqual(sensor.reflection(), 100)
         self.assertEqual(sensor.ambient(), 40)
@@ -147,7 +150,7 @@ class SensorReadingTests(unittest.TestCase):
 
     def test_default_ambient_is_shared_by_world_types(self):
         sensor = self.color_at(200)
-        for field in (world.FlatWhiteWorld(), world.LineWorld(), world.ScriptableWorld()):
+        for field in (FlatWhiteWorld(), LineWorld(), ScriptableWorld()):
             world.current_world = field
             self.assertEqual(sensor.ambient(), 5)
             self.assertEqual(sensor.reflection(), 5)

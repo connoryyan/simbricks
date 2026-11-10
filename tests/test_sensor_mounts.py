@@ -1,3 +1,4 @@
+from maps.scriptable.world import ScriptableWorld
 import math
 import unittest
 
@@ -7,7 +8,7 @@ from pybricks.robotics import DriveBase
 from pybricks.tools import wait
 from sim.clock import clock
 from sim.models import ColorSensorModel, DriveBaseModel, MotorModel
-from sim import world
+import world
 
 
 class SensorMountTests(unittest.TestCase):
@@ -110,7 +111,7 @@ class SensorMountTests(unittest.TestCase):
         self.assertEqual(sensor.pose(), before)
 
     def test_existing_sensor_reads_still_work(self):
-        field = world.ScriptableWorld()
+        field = ScriptableWorld()
         world.current_world = field
         color, ultrasonic = ColorSensor(Port.C), UltrasonicSensor(Port.D)
         self.db.model.mount(color.model, above_mm=-18, pitch_deg=90)

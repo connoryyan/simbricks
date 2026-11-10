@@ -16,3 +16,8 @@ robot brakes when the measured obstacle distance reaches 100 mm. The SVG shows
 the map, actual robot path and final position. Each run saves it as
 `examples/line_follow/map_visual.svg`. A simulation timeout also brakes
 the robot if it does not reach the obstacle.
+
+The root `world` package defines `World`, `Line` and `Obstacle` base classes.
+Reusable geometry includes `Polyline` and `BoxObstacle`. Concrete maps live in
+`maps/<name>/world.py`, beside their `preview.svg`. See [maps/README.md](maps/README.md)
+for the map folder layout and a custom map example.

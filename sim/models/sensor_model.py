@@ -1,7 +1,7 @@
 import math
 import random
 
-from .. import world as world_module
+import world as world_module
 from .model import Model
 
 # What the ultrasonic sensor returns when nothing is measured.
@@ -38,7 +38,7 @@ class SensorModel(Model):
 
     @property
     def world(self) -> world_module.World:
-        return world_module.current_world
+        return world_module.get_current_world()
 
     def set_pose(self, x_mm: float, y_mm: float, z_mm: float, yaw_deg: float) -> None:
         '''

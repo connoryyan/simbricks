@@ -8,9 +8,9 @@ import unittest
 import xml.etree.ElementTree as ET
 
 from examples.line_follow.line_follow import run, STOP_DISTANCE_MM, SPEED_MM_S
-from sim import world
+import world
 from sim.clock import clock
-from examples.line_follow.map import LineFollowWorld
+from maps.line_follow.world import LineFollowWorld
 
 
 class LineFollowTests(unittest.TestCase):

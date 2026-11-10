@@ -1,11 +1,10 @@
-import math
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from examples.line_follow.map import LineFollowWorld
-from sim import world
+from maps.line_follow.world import LineFollowWorld
+import world
 from pybricks.tools import StopWatch, wait
 from pybricks.robotics import DriveBase
 from pybricks.pupdevices import ColorSensor, Motor, UltrasonicSensor
@@ -97,25 +96,7 @@ def save_map(path, field, trace):
         field (LineFollowWorld): Simulated map.
         trace (list): Recorded robot poses.
     '''
-    points = ' '.join(f'{x:.2f},{-y:.2f}' for x, y in field.path)
-    driven = ' '.join(f'{x:.2f},{-y:.2f}' for x, y, _ in trace)
-    boxes = ''.join(
-        f'<rect x="{b.xmin}" y="{-b.ymax}" width="{b.xmax-b.xmin}" '
-        f'height="{b.ymax-b.ymin}" fill="#e57235"/>' for b in field.obstacles)
-    x, y, yaw = trace[-1]
-    arrow_x = x + 70*math.cos(math.radians(yaw))
-    arrow_y = y + 70*math.sin(math.radians(yaw))
-    path.write_text(
-        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="-100 -380 2700 700">'
-        '<rect x="-100" y="-380" width="2700" height="700" fill="white"/>'
-        f'<polyline points="{points}" fill="none" stroke="#161616" '
-        'stroke-width="20" stroke-linejoin="round" stroke-linecap="round"/>'
-        f'{boxes}<polyline points="{driven}" fill="none" stroke="#168dc1" stroke-width="3"/>'
-        f'<circle cx="{x}" cy="{-y}" r="65" fill="#00ee00" fill-opacity="0.25"/>'
-        f'<path d="M{x},{-y} L{arrow_x},{-arrow_y}" stroke="#ee0000" stroke-width="5"/>'
-        '</svg>',
-        encoding='utf-8',
-    )
+    field.save_preview(path, trace)
 
 
 if __name__ == '__main__':
