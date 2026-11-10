@@ -32,3 +32,7 @@ for the map folder layout and a custom map example.
 The planar IMU supports gyro heading, stationary bias calibration and zero pitch
 and roll. Run `python -B examples/imu_test.py`. See [docs/imu.md](docs/imu.md) for
 the simulator binding, coordinate conventions and official implementation references.
+
+Optional finite wheel friction separates encoder odometry from actual body motion.
+Run `python -B examples/friction_test.py` for wheelspin and braking slip. See
+[docs/friction.md](docs/friction.md) for configuration and model limits.

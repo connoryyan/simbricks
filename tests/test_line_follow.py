@@ -75,12 +75,25 @@ class LineFollowTests(unittest.TestCase):
         self.previous_world = world.current_world
         clock._steppables.clear()
         clock.time_ms = 0
+        self.previous_initialization = clock._initialization
+        left = example.Motor(example.Port.A, example.Direction.COUNTERCLOCKWISE)
+        right = example.Motor(example.Port.B)
+        robot = example.DriveBase(left, right, 56, 112)
+        self.fixture = patch.multiple(
+            example, left=left, right=right, db=robot,
+            color=example.ColorSensor(example.Port.C),
+            ultrasonic=example.UltrasonicSensor(example.Port.D), field=None,
+        )
+        self.fixture.start()
+        example.field = example.sim.initialize(example.init)
 
     def tearDown(self):
+        self.fixture.stop()
         clock._steppables.clear()
         clock._steppables.update(self.previous_models)
         clock.time_ms = self.previous_time
         world.current_world = self.previous_world
+        clock._initialization = self.previous_initialization
 
     def test_line_width_and_winding_path(self):
         field = LineFollowWorld()

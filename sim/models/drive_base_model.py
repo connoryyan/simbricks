@@ -72,6 +72,38 @@ class DriveBaseModel(Model):
         self._last_r: float = right_model.angle * right_sign
         self._mounts: list[_SensorMount] = []
         self._imu = None
+        self.friction_enabled = False
+        self._mass_kg = 1.2
+        self._yaw_inertia_kg_m2 = self._mass_kg * (axle_track / 1000)**2 / 6
+        self._contact_stiffness = 30.0
+        self._vx_m_s = self._vy_m_s = self._omega_rad_s = 0.0
+        self._ax_m_s2 = self._ay_m_s2 = 0.0
+
+    def configure_friction(self, enabled=True, *, mass_kg=1.2,
+                           yaw_inertia_kg_m2=None, contact_stiffness=30.0):
+        '''
+        Configure finite wheel friction or ideal rolling.
+
+        Arg:
+            enabled (bool): Enable finite friction dynamics.
+            mass_kg (float): Body mass in kg.
+            yaw_inertia_kg_m2 (float | None): Yaw inertia, or a square-body estimate.
+            contact_stiffness (float): Contact force per slip speed in N/(m/s).
+        '''
+        inertia = (mass_kg * (self.axle_track/1000)**2 / 6
+                   if yaw_inertia_kg_m2 is None else yaw_inertia_kg_m2)
+        if not all(math.isfinite(v) and v > 0 for v in (mass_kg, inertia, contact_stiffness)):
+            raise ValueError('Mass, inertia and contact stiffness must be finite and positive')
+        # Preserve world velocity when changing modes. No encoder offsets change.
+        if enabled and not self.friction_enabled:
+            speed = self.encoder_speed_mm_s()/1000
+            self._vx_m_s = speed*math.cos(self.heading_rad)
+            self._vy_m_s = speed*math.sin(self.heading_rad)
+            self._omega_rad_s = -math.radians(self.encoder_turn_rate_dps())
+        self._mass_kg = mass_kg
+        self._yaw_inertia_kg_m2 = inertia
+        self._contact_stiffness = contact_stiffness
+        self.friction_enabled = bool(enabled)
 
     @property
     def imu(self):
@@ -84,10 +116,26 @@ class DriveBaseModel(Model):
         return self._imu
 
     def step(self, dt_s: float) -> None:
-        self._update_odometry()
+        if not math.isfinite(dt_s) or dt_s <= 0:
+            raise ValueError('Body step must be finite and positive')
+        old_vx, old_vy = self._vx_m_s, self._vy_m_s
+        ds, dtheta_cw = self._update_odometry()
+        if self.friction_enabled:
+            self._step_friction(dt_s)
+        else:
+            mid_heading = self.heading_rad - dtheta_cw / 2.0
+            self.x_mm += ds * math.cos(mid_heading)
+            self.y_mm += ds * math.sin(mid_heading)
+            self.heading_rad -= dtheta_cw
+            speed = self.encoder_speed_mm_s()/1000
+            self._vx_m_s = speed*math.cos(self.heading_rad)
+            self._vy_m_s = speed*math.sin(self.heading_rad)
+            self._omega_rad_s = -math.radians(self.encoder_turn_rate_dps())
+        self._ax_m_s2 = (self._vx_m_s-old_vx)/dt_s
+        self._ay_m_s2 = (self._vy_m_s-old_vy)/dt_s
         self._update_mounts()
 
-    def _update_odometry(self) -> None:
+    def _update_odometry(self) -> tuple[float, float]:
         l = self._left.angle * self._left_sign
         r = self._right.angle * self._right_sign
         dl = (l - self._last_l) * self.mm_per_deg
@@ -97,13 +145,54 @@ class DriveBaseModel(Model):
         ds = (dl + dr) / 2.0
         dtheta_cw = (dl - dr) / self.axle_track      # radians, clockwise positive
 
-        mid_heading = self.heading_rad - dtheta_cw / 2.0
-        self.x_mm += ds * math.cos(mid_heading)
-        self.y_mm += ds * math.sin(mid_heading)
-        self.heading_rad -= dtheta_cw
-
         self.distance_mm += ds
         self.angle_deg += math.degrees(dtheta_cw)
+        return ds, dtheta_cw
+
+    def _step_friction(self, dt_s):
+        '''
+        Integrate contact forces with a shared friction circle at each wheel.
+        '''
+        import world
+        field = world.get_current_world()
+        half_track = self.axle_track/2000
+        wheel_speeds = (self._left.speed*self._left_sign*self.mm_per_deg/1000,
+                        self._right.speed*self._right_sign*self.mm_per_deg/1000)
+        # Small steps keep the compliant contact response stable, including light
+        # bodies and small yaw inertias. At most 1 ms per contact integration.
+        stable_dt = min(0.001, self._mass_kg/(8*self._contact_stiffness),
+                        self._yaw_inertia_kg_m2/(8*self._contact_stiffness*half_track**2))
+        count = math.ceil(dt_s/stable_dt)
+        h = dt_s/count
+        for _ in range(count):
+            c, s = math.cos(self.heading_rad), math.sin(self.heading_rad)
+            forward = c*self._vx_m_s + s*self._vy_m_s
+            lateral = -s*self._vx_m_s + c*self._vy_m_s
+            fx = fy = torque = 0.0
+            for wheel_speed, offset in zip(wheel_speeds, (half_track, -half_track)):
+                mu = field.get_friction_at(self.x_mm-s*offset*1000,
+                                           self.y_mm+c*offset*1000)
+                if not math.isfinite(mu) or mu < 0:
+                    raise ValueError('Ground friction must be finite and non-negative')
+                slip = wheel_speed - (forward-self._omega_rad_s*offset)
+                wheel_fx = self._contact_stiffness*slip
+                wheel_fy = -self._contact_stiffness*lateral
+                magnitude = math.hypot(wheel_fx, wheel_fy)
+                limit = mu*self._mass_kg*9.80665/2
+                if magnitude > limit:
+                    scale = limit/magnitude
+                    wheel_fx *= scale
+                    wheel_fy *= scale
+                fx += wheel_fx
+                fy += wheel_fy
+                torque -= offset*wheel_fx
+            old_vx, old_vy, old_omega = self._vx_m_s, self._vy_m_s, self._omega_rad_s
+            self._vx_m_s += (c*fx-s*fy)/self._mass_kg*h
+            self._vy_m_s += (s*fx+c*fy)/self._mass_kg*h
+            self._omega_rad_s += torque/self._yaw_inertia_kg_m2*h
+            self.x_mm += (old_vx+self._vx_m_s)*0.5*h*1000
+            self.y_mm += (old_vy+self._vy_m_s)*0.5*h*1000
+            self.heading_rad += (old_omega+self._omega_rad_s)*0.5*h
 
     def pose(self) -> tuple[float, float, float]:
         '''
@@ -121,6 +210,15 @@ class DriveBaseModel(Model):
         Returns:
             float: Speed of the robot in mm/s.
         '''
+        if self.friction_enabled:
+            return (math.cos(self.heading_rad)*self._vx_m_s
+                    + math.sin(self.heading_rad)*self._vy_m_s)*1000
+        return self.encoder_speed_mm_s()
+
+    def encoder_speed_mm_s(self):
+        '''
+        Return forward speed estimated from wheel encoders in mm/s.
+        '''
         vl = self._left.speed * self._left_sign * self.mm_per_deg
         vr = self._right.speed * self._right_sign * self.mm_per_deg
         return (vl + vr) / 2.0
@@ -132,9 +230,31 @@ class DriveBaseModel(Model):
         Returns:
             float: Turn rate in deg/s, clockwise positive.
         '''
+        if self.friction_enabled:
+            return -math.degrees(self._omega_rad_s)
+        return self.encoder_turn_rate_dps()
+
+    def encoder_turn_rate_dps(self):
+        '''
+        Return clockwise turn rate estimated from wheel encoders in deg/s.
+        '''
         vl = self._left.speed * self._left_sign * self.mm_per_deg
         vr = self._right.speed * self._right_sign * self.mm_per_deg
         return math.degrees((vl - vr) / self.axle_track)
+
+    def velocity_mm_s(self):
+        '''
+        Return the actual world x and y velocities in mm/s.
+        '''
+        return self._vx_m_s*1000, self._vy_m_s*1000
+
+    def acceleration_mm_s2(self):
+        '''
+        Return actual forward and left acceleration in mm/s/s.
+        '''
+        c, s = math.cos(self.heading_rad), math.sin(self.heading_rad)
+        return ((c*self._ax_m_s2+s*self._ay_m_s2)*1000,
+                (-s*self._ax_m_s2+c*self._ay_m_s2)*1000)
 
     def place(self, x_mm: float, y_mm: float, 
               heading_deg: float = 0.0) -> None:
@@ -145,6 +265,8 @@ class DriveBaseModel(Model):
             raise ValueError("Robot pose must be finite")
         self.x_mm, self.y_mm = x_mm, y_mm
         self.heading_rad = math.radians(heading_deg)
+        self._vx_m_s = self._vy_m_s = self._omega_rad_s = 0.0
+        self._ax_m_s2 = self._ay_m_s2 = 0.0
         if self._imu is not None:
             self._imu.rebase_pose()
         self._update_mounts()

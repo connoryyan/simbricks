@@ -9,8 +9,7 @@ from pybricks.pupdevices import Motor
 from pybricks.robotics import DriveBase
 from pybricks.tools import wait
 import sim
-import world
-from maps.flat_white.world import FlatWhiteWorld
+
 
 
 hub = PrimeHub()
@@ -24,6 +23,8 @@ def init(robot):
     '''
     Set up the robot devices, initial position and field.
     '''
+    import world
+    from maps.flat_white.world import FlatWhiteWorld
     world.current_world = FlatWhiteWorld()
     robot.model.place(0, 0, 0)
 sim.initialize(init, db)

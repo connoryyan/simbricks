@@ -231,8 +231,8 @@ class DriveBase:
     @requires_init
     def state(self) -> tuple[float, float, float, float]:
         turn_rate = (-self._model.imu.calibrated_rate if self._use_gyro
-                     else self._model.turn_rate_dps())
-        return (self._distance, self._model.speed_mm_s(),
+                     else self._model.encoder_turn_rate_dps())
+        return (self._distance, self._model.encoder_speed_mm_s(),
                 self._angle, turn_rate)
 
     def reset(self, distance: float = 0, angle: float = 0) -> None:

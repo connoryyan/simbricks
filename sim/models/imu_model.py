@@ -60,8 +60,8 @@ class IMUModel(Model):
         yaw = self.body.heading_rad if self.body is not None else self._last_yaw
         true_rate = math.degrees(yaw-self._last_yaw) / dt_s
         speed = self.body.speed_mm_s() if self.body is not None else 0.0
-        acceleration = (speed-self._last_speed) / dt_s
-        self._acceleration = (acceleration, speed*math.radians(true_rate), self.gravity_mm_s2)
+        ax, ay = self.body.acceleration_mm_s2() if self.body is not None else (0.0, 0.0)
+        self._acceleration = (ax, ay, self.gravity_mm_s2)
         self._last_yaw, self._last_speed = yaw, speed
         self._elapsed += dt_s
         self.raw_rate = true_rate + self.bias_dps + self._rng.gauss(0, self.noise_dps)
@@ -76,10 +76,11 @@ class IMUModel(Model):
         # accidentally calibrate the gyro. This replaces the hardware idle gate.
         wheels_idle = (self.body is None or
                        (abs(self.body._left.speed) < 0.1 and abs(self.body._right.speed) < 0.1))
-        stationary = (abs(speed) < 0.1 and abs(true_rate) < 0.1
+        body_speed = math.hypot(*self.body.velocity_mm_s()) if self.body is not None else 0.0
+        stationary = (body_speed < 0.1 and abs(true_rate) < 0.1
                       and wheels_idle
                       and variation < self.angular_velocity_threshold
-                      and math.hypot(acceleration, self._acceleration[1]) < self.acceleration_threshold)
+                      and math.hypot(ax, ay) < self.acceleration_threshold)
         if not stationary:
             self._stationary_s = self._window_s = self._bias_sum = 0.0
             return

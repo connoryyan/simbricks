@@ -13,7 +13,7 @@ class World(ABC):
     '''
     @abstractmethod
     def __init__(self, ambient_light: float = 15.0, *, reflection=85,
-                 bounds=(-100, -380, 2600, 320)):
+                 bounds=(-100, -380, 2600, 320), friction_coefficient=0.8):
         '''
         Create the common map state.
 
@@ -21,6 +21,7 @@ class World(ABC):
             ambient_light (float): Ambient signal from 0 to 100.
             reflection (float): Ground reflection from 0 to 100.
             bounds (tuple): Preview xmin, ymin, xmax and ymax in mm.
+            friction_coefficient (float): Ground friction coefficient.
         '''
         if not math.isfinite(reflection) or not 0 <= reflection <= 100:
             raise ValueError("Ground reflection must be between 0 and 100")
@@ -32,6 +33,31 @@ class World(ABC):
         self.bounds = bounds
         self.lines: list[Line] = []
         self.obstacles: list[Obstacle] = []
+        self.friction_coefficient = friction_coefficient
+
+    @property
+    def friction_coefficient(self):
+        return self._friction_coefficient
+
+    @friction_coefficient.setter
+    def friction_coefficient(self, value):
+        value = float(value)
+        if not math.isfinite(value) or value < 0:
+            raise ValueError('Friction coefficient must be finite and non-negative')
+        self._friction_coefficient = value
+
+    def get_friction_at(self, x_mm, y_mm):
+        '''
+        Return ground friction at a wheel contact point.
+
+        Arg:
+            x_mm (float): World x coordinate in mm.
+            y_mm (float): World y coordinate in mm.
+
+        Returns:
+            float: Non-negative friction coefficient.
+        '''
+        return self.friction_coefficient
 
     def get_ambient_light(self) -> float:
         return self._ambient_light
