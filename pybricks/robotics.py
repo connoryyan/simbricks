@@ -66,7 +66,7 @@ class DriveBase:
     step_priority = 2
 
     def __init__(self, left_motor, right_motor, wheel_diameter: float,
-                 axle_track: float, use_gyro: bool = False):
+                 axle_track: float):
         if not isinstance(left_motor, Motor) or not isinstance(right_motor, Motor):
             raise TypeError("left_motor and right_motor must be Motor objects")
         self._left = left_motor
@@ -82,7 +82,16 @@ class DriveBase:
         )
         self._mm_per_deg = self._model.mm_per_deg
         self._track = self._model.axle_track
-        self.use_gyro = use_gyro
+        # A real hub has one IMU shared by hub.imu and drive base control.
+        from sim.hub import get_active_hub
+        hub = get_active_hub()
+        if hub is not None:
+            try:
+                hub.bind_body(self._model)
+            except ValueError:
+                self._model.detach()
+                raise
+        self._use_gyro = False
 
         # Default limits (simulation defaults, not the real firmware's).
         self._straight_speed = 200.0  # mm/s
@@ -113,7 +122,18 @@ class DriveBase:
 
     @property
     def _angle(self) -> float:
+        if self._use_gyro:
+            return self._model.imu.heading()
         return self._model.angle_deg - self._angle_offset
+
+    def use_gyro(self, use_gyro: bool) -> None:
+        '''
+        Stop the robot and select gyro or wheel heading feedback.
+        '''
+        self.stop()
+        self._use_gyro = bool(use_gyro)
+        if self._use_gyro:
+            self._model.imu
 
     def step(self, dt_s: float) -> None:
         if self._maneuver is not None:
@@ -153,6 +173,8 @@ class DriveBase:
         self._right.run(v_right / self._mm_per_deg)
 
     def _apply_then(self, then: Stop) -> None:
+        if self._model._imu is not None:
+            self._model.imu.in_use = self._use_gyro and then == Stop.HOLD
         if then in (Stop.COAST, Stop.COAST_SMART):
             self._left.stop()
             self._right.stop()
@@ -163,15 +185,21 @@ class DriveBase:
 
     def drive(self, speed: float, turn_rate: float) -> None:
         self._maneuver = None
+        if self._use_gyro:
+            self._model.imu.in_use = True
         self._set_wheels(speed, turn_rate)
 
     def stop(self) -> None:
         self._maneuver = None
+        if self._model._imu is not None:
+            self._model.imu.in_use = False
         self._left.stop()
         self._right.stop()
 
     def brake(self) -> None:
         self._maneuver = None
+        if self._model._imu is not None:
+            self._model.imu.in_use = False
         self._left.brake()
         self._right.brake()
 
@@ -194,15 +222,20 @@ class DriveBase:
         return self._angle
 
     def state(self) -> tuple[float, float, float, float]:
+        turn_rate = (-self._model.imu.calibrated_rate if self._use_gyro
+                     else self._model.turn_rate_dps())
         return (self._distance, self._model.speed_mm_s(),
-                self._angle, self._model.turn_rate_dps())
+                self._angle, turn_rate)
 
     def reset(self, distance: float = 0, angle: float = 0) -> None:
         '''
         Reset the estimated distance and angle.
         '''
+        self.brake()
         self._distance_offset = self._model.distance_mm - float(distance)
         self._angle_offset = self._model.angle_deg - float(angle)
+        if self._use_gyro:
+            self._model.imu.reset_heading(float(angle))
 
     def settings(self, straight_speed=None, straight_acceleration=None,
                  turn_rate=None, turn_acceleration=None):
@@ -238,6 +271,8 @@ class DriveBase:
             then,
         )
         self._maneuver = m
+        if self._use_gyro:
+            self._model.imu.in_use = True
         if wait:
             timeout_ms = (m.duration + SETTLE_TIMEOUT_S + 1.0) * 1000.0
             clock.advance_until(self.done, timeout_ms=timeout_ms)

@@ -71,6 +71,17 @@ class DriveBaseModel(Model):
         self._last_l: float = left_model.angle * left_sign
         self._last_r: float = right_model.angle * right_sign
         self._mounts: list[_SensorMount] = []
+        self._imu = None
+
+    @property
+    def imu(self):
+        '''
+        Return the body IMU and create it on first use.
+        '''
+        if self._imu is None:
+            from .imu_model import IMUModel
+            self._imu = IMUModel(self)
+        return self._imu
 
     def step(self, dt_s: float) -> None:
         self._update_odometry()
@@ -134,6 +145,8 @@ class DriveBaseModel(Model):
             raise ValueError("Robot pose must be finite")
         self.x_mm, self.y_mm = x_mm, y_mm
         self.heading_rad = math.radians(heading_deg)
+        if self._imu is not None:
+            self._imu.rebase_pose()
         self._update_mounts()
 
     def mount(self, sensor_model: SensorModel,
@@ -187,3 +200,5 @@ class DriveBaseModel(Model):
         Remove the model from the clock.
         '''
         clock.remove_steppable(self)
+        if self._imu is not None:
+            clock.remove_steppable(self._imu)

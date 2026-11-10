@@ -9,10 +9,12 @@ from pybricks.tools import StopWatch, wait
 from pybricks.robotics import DriveBase
 from pybricks.pupdevices import ColorSensor, Motor, UltrasonicSensor
 from pybricks.parameters import Direction, Port
+from sim.clock import clock
+from render.video import PoseRecorder, save_video
 
 
-SPEED_MM_S = 60.0
-KP = 2
+SPEED_MM_S = 100.0
+KP = 3
 MAX_TURN_RATE = 100.0
 TARGET_REFLECTION = 50.0
 LOOP_MS = 10
@@ -45,14 +47,21 @@ def init():
     return field
 
 
-def run():
+def run(recording=None):
     '''
     Follow the left line edge with P control and stop before the obstacle.
+
+    Arg:
+        recording (list | None): Optional list for video pose samples.
 
     Returns:
         tuple: Map, robot, recorded poses and final obstacle distance.
     '''
     field = init()
+    recorder = None
+    if recording is not None:
+        recorder = PoseRecorder(db, (color, ultrasonic), recording, clock)
+        clock.add_steppable(recorder)
     timer = StopWatch()
     trace = [db.pose()]
     stopped_for_obstacle = False
@@ -75,6 +84,8 @@ def run():
         # Advance the simulated time while the wheels finish braking.
         wait(500)
         trace.append(db.pose())
+        if recorder is not None:
+            clock.remove_steppable(recorder)
 
     if not stopped_for_obstacle:
         raise TimeoutError(
@@ -99,8 +110,24 @@ def save_map(path, field, trace):
     field.save_preview(path, trace)
 
 
+def main():
+    '''
+    Run the simulation and save recorded frames even after a timeout.
+    '''
+    recording = []
+    try:
+        field, db, trace, distance = run(recording)
+    except TimeoutError as err:
+        print(f"Simulation timeout: {err}", file=sys.stderr)
+        field = world.get_current_world()
+
+    if not recording:
+        print("No recorded frames to save", file=sys.stderr)
+        return
+    video_path = Path(__file__).resolve().with_name('line_follow.mp4')
+    save_video(video_path, field, recording)
+    print(f"Video saved to {video_path}")
+
+
 if __name__ == '__main__':
-    field, db, trace, distance = run()
-    svg_path = Path(__file__).resolve().with_name('map_visual.svg')
-    save_map(svg_path, field, trace)
-    print(f"Map saved to {svg_path}")
+    main()

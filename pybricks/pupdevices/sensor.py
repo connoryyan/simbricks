@@ -1,4 +1,6 @@
-from sim.models import SensorModel, ColorSensorModel, UltrasonicSensorModel
+import math
+
+from sim.models import SensorModel, ColorSensorModel, UltrasonicSensorModel, ForceSensorModel
 
 from ..parameters import Port
 from .device import Device
@@ -113,3 +115,38 @@ class UltrasonicSensor(Sensor):
             int: Distance in mm. Return 2000 when no object is detected.
         '''
         return self._model.distance()
+
+
+class ForceSensor(Sensor):
+    '''
+    Provide a LEGO SPIKE force sensor with scripted simulator input.
+    '''
+    def __init__(self, port: Port):
+        super().__init__(port)
+        self._model = ForceSensorModel()
+
+    def force(self):
+        '''
+        Return measured force in N.
+        '''
+        return self._model.force_n
+
+    def distance(self):
+        '''
+        Return button displacement in mm.
+        '''
+        return self._model.distance_mm
+
+    def pressed(self, force=3):
+        '''
+        Return True when measured force reaches the threshold in N.
+        '''
+        if not math.isfinite(force) or force < 0:
+            raise ValueError('Force threshold must be finite and non-negative')
+        return self.force() >= force
+
+    def touched(self):
+        '''
+        Return True when the button moves or measures a force.
+        '''
+        return self.distance() > 0 or self.force() > 0

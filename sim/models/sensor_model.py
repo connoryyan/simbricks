@@ -178,3 +178,23 @@ class UltrasonicSensorModel(SensorModel):
                                         MAX_DISTANCE_MM, z_mm=self._z_mm,
                                         pitch_deg=self._pitch_deg)
         return int(round(_clamp(self._noisy(d), 0, MAX_DISTANCE_MM)))
+
+
+class ForceSensorModel(SensorModel):
+    '''
+    Store scripted force and button displacement for a force sensor.
+    '''
+    def __init__(self):
+        super().__init__()
+        self.force_n = 0.0
+        self.distance_mm = 0.0
+
+    def set_measurement(self, force_n=0.0, distance_mm=0.0):
+        '''
+        Set force in N and button displacement in mm for simulator input.
+        '''
+        if not math.isfinite(force_n) or not 0 <= force_n <= 10:
+            raise ValueError('Force must be between 0 and 10 N')
+        if not math.isfinite(distance_mm) or not 0 <= distance_mm <= 8:
+            raise ValueError('Button displacement must be between 0 and 8 mm')
+        self.force_n, self.distance_mm = force_n, distance_mm
