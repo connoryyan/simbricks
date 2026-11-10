@@ -12,7 +12,7 @@ from sim.clock import clock
 
 class IMUTests(unittest.TestCase):
     def setUp(self):
-        self.previous_models = clock._steppables.copy()
+        self.previous_models = {priority: group.copy() for priority, group in clock._steppables.items()}
         self.previous_time = clock.time_ms
         clock._steppables.clear()
         clock.time_ms = 0
@@ -208,8 +208,8 @@ class IMUTests(unittest.TestCase):
 
     def test_detach_removes_imu_and_body_from_clock(self):
         self.db.model.detach()
-        self.assertNotIn(self.imu.model, clock._steppables)
-        self.assertNotIn(self.db.model, clock._steppables)
+        self.assertNotIn(self.imu.model, clock.steppables)
+        self.assertNotIn(self.db.model, clock.steppables)
 
 
 if __name__ == '__main__':

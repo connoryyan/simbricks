@@ -20,7 +20,7 @@ class HubModel(Model):
         '''
         Connect a drive body to the hub without resetting IMU calibration.
         '''
-        if self.body is not None and self.body is not body and self.body in clock._steppables:
+        if self.body is not None and self.body is not body and self.body in clock.steppables:
             raise ValueError('One PrimeHub can only measure one active drive body')
         if body._imu is not None and body._imu is not self.imu:
             clock.remove_steppable(self.imu)
@@ -37,7 +37,7 @@ def get_active_hub():
     '''
     Return the hub registered on the current clock, or None.
     '''
-    return next((item for item in clock._steppables if isinstance(item, HubModel)), None)
+    return next((item for item in clock.steppables if isinstance(item, HubModel)), None)
 
 
 def get_hub():
@@ -47,7 +47,7 @@ def get_hub():
     hub = get_active_hub()
     if hub is None:
         from .models.drive_base_model import DriveBaseModel
-        bodies = [item for item in clock._steppables if isinstance(item, DriveBaseModel)]
+        bodies = [item for item in clock.steppables if isinstance(item, DriveBaseModel)]
         if len(bodies) > 1:
             raise ValueError('Create PrimeHub before creating multiple simulated bodies')
         hub = HubModel()

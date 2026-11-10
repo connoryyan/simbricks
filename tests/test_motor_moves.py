@@ -10,7 +10,7 @@ from sim.models import MotorModel
 
 class MotorMoveTests(unittest.TestCase):
     def setUp(self):
-        self.previous_models = clock._steppables.copy()
+        self.previous_models = {priority: group.copy() for priority, group in clock._steppables.items()}
         self.previous_time = clock.time_ms
         clock._steppables.clear()
         clock.time_ms = 0
@@ -25,8 +25,8 @@ class MotorMoveTests(unittest.TestCase):
             with self.subTest(motor_type=motor_type):
                 clock._steppables.clear()
                 motor_type(Port.A)
-                self.assertEqual(len(clock._steppables), 1)
-                self.assertIsInstance(next(iter(clock._steppables)), MotorModel)
+                self.assertEqual(len(clock.steppables), 1)
+                self.assertIsInstance(next(iter(clock.steppables)), MotorModel)
 
     def test_signed_moves_from_nonzero_angle_in_both_motor_directions(self):
         for direction in Direction:
@@ -112,7 +112,7 @@ class MotorMoveTests(unittest.TestCase):
 
 
 class ClockPhaseTests(unittest.TestCase):
-    def test_set_steps_devices_in_phase_order(self):
+    def test_groups_step_devices_in_phase_order(self):
         events = []
 
         class Device:
@@ -124,14 +124,68 @@ class ClockPhaseTests(unittest.TestCase):
                 events.append(self.name)
 
         sim = SimClock()
-        for name, priority in (("controller", 2), ("body", 1),
+        for name, priority in (("recorder", 3), ("imu", 1.5),
+                               ("controller", 2), ("body", 1),
                                ("left", 0), ("right", 0)):
             sim.add_steppable(Device(name, priority))
-        self.assertIsInstance(sim._steppables, set)
+        self.assertIsInstance(sim._steppables, dict)
+        self.assertTrue(all(isinstance(group, set) for group in sim._steppables.values()))
         sim.advance_ms(10)
-        for offset in (0, 4):
+        for offset in (0, 6):
             self.assertEqual(set(events[offset:offset + 2]), {"left", "right"})
-            self.assertEqual(events[offset + 2:offset + 4], ["body", "controller"])
+            self.assertEqual(events[offset + 2:offset + 6],
+                             ["body", "imu", "controller", "recorder"])
+
+    def test_registration_changes_apply_on_next_tick(self):
+        sim = SimClock()
+        events = []
+
+        class Device:
+            step_priority = 1
+
+            def __init__(self, name):
+                self.name = name
+
+            def step(self, dt_s):
+                events.append(self.name)
+
+        old = Device('old')
+        new = Device('new')
+
+        class Updater:
+            step_priority = 0
+
+            def step(self, dt_s):
+                sim.remove_steppable(old)
+                sim.add_steppable(new)
+
+        sim.add_steppable(Updater())
+        sim.add_steppable(old)
+        sim.add_steppable(old)
+        sim.advance_ms(5)
+        self.assertEqual(events, ['old'])
+        sim.advance_ms(5)
+        self.assertEqual(events, ['old', 'new'])
+
+    def test_priority_changes_require_registration_again(self):
+        sim = SimClock()
+
+        class Device:
+            step_priority = 0
+
+            def step(self, dt_s):
+                pass
+
+        device = Device()
+        sim.add_steppable(device)
+        device.step_priority = 2
+        sim.add_steppable(device)
+        self.assertIn(device, sim._steppables[0])
+        self.assertNotIn(device, sim._steppables[2])
+        sim.remove_steppable(device)
+        sim.add_steppable(device)
+        self.assertNotIn(device, sim._steppables[0])
+        self.assertIn(device, sim._steppables[2])
 
 
 if __name__ == "__main__":

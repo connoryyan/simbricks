@@ -14,7 +14,7 @@ from sim.models import ColorSensorModel
 
 class SensorReadingTests(unittest.TestCase):
     def setUp(self):
-        self.previous_models = clock._steppables.copy()
+        self.previous_models = {priority: group.copy() for priority, group in clock._steppables.items()}
         self.previous_world = world.current_world
         clock._steppables.clear()
         world.current_world = FlatWhiteWorld(ambient_light=0)
@@ -97,10 +97,10 @@ class SensorReadingTests(unittest.TestCase):
                        {"max_distance_mm": float("nan")},
                        {"reference_distance_mm": 200, "max_distance_mm": 100}):
             with self.subTest(kwargs=kwargs):
-                before = len(clock._steppables)
+                before = len(clock.steppables)
                 with self.assertRaises(ValueError):
                     ColorSensorModel(**kwargs)
-                self.assertEqual(len(clock._steppables), before)
+                self.assertEqual(len(clock.steppables), before)
 
     def test_noise_is_repeatable_and_readings_stay_bounded(self):
         first = ColorSensorModel(noise=500, seed=42)

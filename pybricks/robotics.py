@@ -49,20 +49,6 @@ class _Profile:
         return self.sign * pos, self.sign * vel
 
 
-class _Maneuver:
-    '''
-    Store a straight or turn action.
-    '''
-
-    def __init__(self, d0, a0, dist_profile, angle_profile, then):
-        self.d0, self.a0 = d0, a0 # odometry at the start of the move
-        self.dist_profile = dist_profile
-        self.angle_profile = angle_profile
-        self.then = then
-        self.t = 0.0
-        self.duration = max(dist_profile.duration, angle_profile.duration)
-
-
 class DriveBase:
     step_priority = 2
 
@@ -104,7 +90,7 @@ class DriveBase:
         self._distance_offset = 0.0
         self._angle_offset = 0.0
 
-        self._maneuver: _Maneuver | None = None
+        self._maneuver: dict | None = None
 
         clock.add_steppable(self)
 
@@ -142,22 +128,22 @@ class DriveBase:
 
     def _run_maneuver(self, dt_s: float) -> None:
         m = self._maneuver
-        m.t += dt_s
+        m['t'] += dt_s
 
-        d_ref, v_ref = m.dist_profile.at(m.t)
-        a_ref, w_ref = m.angle_profile.at(m.t)
-        d_err = (m.d0 + d_ref) - self._distance
-        a_err = (m.a0 + a_ref) - self._angle
+        d_ref, v_ref = m['dist_profile'].at(m['t'])
+        a_ref, w_ref = m['angle_profile'].at(m['t'])
+        d_err = (m['d0'] + d_ref) - self._distance
+        a_err = (m['a0'] + a_ref) - self._angle
 
         # Feed-forward from the reference plus feedback on the tracking error.
         self._set_wheels(v_ref + KP_DISTANCE * d_err, w_ref + KP_ANGLE * a_err)
 
-        planned_done = m.t >= m.duration
+        planned_done = m['t'] >= m['duration']
         settled = abs(d_err) < DISTANCE_TOL_MM and abs(a_err) < ANGLE_TOL_DEG
-        timed_out = m.t >= m.duration + SETTLE_TIMEOUT_S
+        timed_out = m['t'] >= m['duration'] + SETTLE_TIMEOUT_S
         if planned_done and (settled or timed_out):
             self._maneuver = None
-            self._apply_then(m.then)
+            self._apply_then(m['then'])
 
     def _set_wheels(self, speed_mm_s: float, turn_rate_dps: float) -> None:
         '''
@@ -272,15 +258,20 @@ class DriveBase:
     def _start(self, distance: float, angle: float, then: Stop, wait: bool) -> None:
         # Hold the other axis at its starting value (straight keeps heading,
         # turn keeps position) by giving it a zero-length profile.
-        m = _Maneuver(
-            self._distance, self._angle,
-            _Profile(distance, self._straight_speed, self._straight_accel),
-            _Profile(angle, self._turn_rate, self._turn_accel),
-            then,
-        )
+        dist_profile = _Profile(distance, self._straight_speed, self._straight_accel)
+        angle_profile = _Profile(angle, self._turn_rate, self._turn_accel)
+        m = {
+            'd0': self._distance,
+            'a0': self._angle,
+            'dist_profile': dist_profile,
+            'angle_profile': angle_profile,
+            'then': then,
+            't': 0.0,
+            'duration': max(dist_profile.duration, angle_profile.duration),
+        }
         self._maneuver = m
         if self._use_gyro:
             self._model.imu.in_use = True
         if wait:
-            timeout_ms = (m.duration + SETTLE_TIMEOUT_S + 1.0) * 1000.0
+            timeout_ms = (m['duration'] + SETTLE_TIMEOUT_S + 1.0) * 1000.0
             clock.advance_until(self.done, timeout_ms=timeout_ms)

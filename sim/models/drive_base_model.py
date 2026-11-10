@@ -1,19 +1,9 @@
 import math
-from dataclasses import dataclass
 
 from sim.clock import clock
 from .model import Model
 from .motor_model import MotorModel
 from .sensor_model import SensorModel
-
-
-@dataclass(frozen=True)
-class _SensorMount:
-    model: SensorModel
-    forward_mm: float
-    left_mm: float
-    z_mm: float
-    yaw_deg: float
 
 
 class DriveBaseModel(Model):
@@ -70,7 +60,7 @@ class DriveBaseModel(Model):
 
         self._last_l: float = left_model.angle * left_sign
         self._last_r: float = right_model.angle * right_sign
-        self._mounts: list[_SensorMount] = []
+        self._mounts: dict[SensorModel, dict[str, float]] = {}
         self._imu = None
         self.friction_enabled = False
         self._mass_kg = 1.2
@@ -295,7 +285,7 @@ class DriveBaseModel(Model):
         '''
         if not isinstance(sensor_model, SensorModel):
             raise TypeError("sensor_model must be a SensorModel")
-        if any(m.model is sensor_model for m in self._mounts):
+        if sensor_model in self._mounts:
             raise ValueError("Sensor model is already mounted on this body")
         values = tuple(float(v) for v in
                        (forward_mm, left_mm, above_mm, yaw_deg, pitch_deg, roll_deg))
@@ -306,16 +296,21 @@ class DriveBaseModel(Model):
         if z < 0:
             raise ValueError("Sensor cannot be below the ground")
         sensor_model.set_tilt(pitch, roll)
-        self._mounts.append(_SensorMount(sensor_model, forward, left, z, yaw))
+        self._mounts[sensor_model] = {
+            'forward_mm': forward,
+            'left_mm': left,
+            'z_mm': z,
+            'yaw_deg': yaw,
+        }
         self._update_mounts()
 
     def _update_mounts(self) -> None:
         c, s = math.cos(self.heading_rad), math.sin(self.heading_rad)
         heading_deg = math.degrees(self.heading_rad)
-        for mount in self._mounts:
-            x = self.x_mm + mount.forward_mm * c - mount.left_mm * s
-            y = self.y_mm + mount.forward_mm * s + mount.left_mm * c
-            mount.model.set_pose(x, y, mount.z_mm, heading_deg + mount.yaw_deg)
+        for sensor_model, mount in self._mounts.items():
+            x = self.x_mm + mount['forward_mm'] * c - mount['left_mm'] * s
+            y = self.y_mm + mount['forward_mm'] * s + mount['left_mm'] * c
+            sensor_model.set_pose(x, y, mount['z_mm'], heading_deg + mount['yaw_deg'])
 
     def detach(self) -> None:
         '''

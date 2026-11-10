@@ -11,7 +11,7 @@ from sim.clock import clock
 
 class HubTests(unittest.TestCase):
     def setUp(self):
-        self.previous_models = clock._steppables.copy()
+        self.previous_models = {priority: group.copy() for priority, group in clock._steppables.items()}
         self.previous_time = clock.time_ms
         clock._steppables.clear()
         clock.time_ms = 0

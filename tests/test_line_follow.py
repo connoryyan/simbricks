@@ -49,7 +49,7 @@ class LineFollowTests(unittest.TestCase):
         for previous, current in zip(frames, frames[1:]):
             self.assertAlmostEqual(current[0]-previous[0], 1/30, delta=0.006)
         self.assertTrue(all(len(frame[2]) == 2 for frame in frames))
-        self.assertFalse(any(type(item).__name__ == 'PoseRecorder' for item in clock._steppables))
+        self.assertFalse(any(type(item).__name__ == 'PoseRecorder' for item in clock.steppables))
 
     def test_timeout_is_caught_and_recorded_frames_are_saved(self):
         errors = io.StringIO()
@@ -67,10 +67,10 @@ class LineFollowTests(unittest.TestCase):
         self.assertGreater(frames[-1][0], 0.5)
         initialize_existing()
         self.assertAlmostEqual(example.db.state()[1], 0, delta=0.01)
-        self.assertFalse(any(type(item).__name__ == 'PoseRecorder' for item in clock._steppables))
+        self.assertFalse(any(type(item).__name__ == 'PoseRecorder' for item in clock.steppables))
 
     def setUp(self):
-        self.previous_models = clock._steppables.copy()
+        self.previous_models = {priority: group.copy() for priority, group in clock._steppables.items()}
         self.previous_time = clock.time_ms
         self.previous_world = world.current_world
         clock._steppables.clear()

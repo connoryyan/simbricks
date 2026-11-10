@@ -6,10 +6,11 @@ if TYPE_CHECKING:
 
 
 STEP_MS = 5 # dt
+STEP_PRIORITIES = (0, 1, 1.5, 2, 3)
 
 
 class NotSteppableError(Exception):
-    def __init__(self, 
+    def __init__(self,
                  msg = "Object must have step() method"):
         super().__init__(msg)
         self.msg = msg
@@ -20,8 +21,18 @@ class SimClock:
         self.step_ms = step_ms
         self.step_s = step_ms / 1000.0
         self.time_ms = 0
-        self._steppables: set[Model] = set() # aggregation
+        self._steppables: dict[float, set[Model]] = {
+            priority: set() for priority in STEP_PRIORITIES
+        }
         self._initialization = None
+
+    @property
+    def steppables(self):
+        '''
+        Return a flat snapshot of registered devices in phase order.
+        '''
+        return tuple(device for priority in STEP_PRIORITIES
+                     for device in self._steppables.get(priority, ()))
 
     def add_steppable(self, steppable) -> None:
         '''
@@ -30,27 +41,33 @@ class SimClock:
         Arg:
             steppable (Model): An object with step() method.
         '''
-        if not hasattr(steppable, "step"):
+        if not callable(getattr(steppable, "step", None)):
             raise NotSteppableError()
 
-        if steppable not in self._steppables:
-            self._steppables.add(steppable)
+        # A priority change takes effect only after removing and adding a device.
+        if any(steppable in group for group in self._steppables.values()):
+            return
+        priority = getattr(steppable, 'step_priority', 0)
+        if priority not in STEP_PRIORITIES:
+            raise ValueError(f'Unsupported step priority: {priority}')
+        self._steppables.setdefault(priority, set()).add(steppable)
 
     def remove_steppable(self, steppable) -> None:
-        if steppable in self._steppables:
-            self._steppables.remove(steppable)
+        for group in self._steppables.values():
+            group.discard(steppable)
 
     def _tick(self, dt_ms: float) -> None:
         '''
         Advance every device by dt_ms.
         '''
         dt_s = dt_ms / 1000.0
-        # Snapshot the set; devices may be removed during a step. Complete all
-        # motor updates before odometry, then let controllers issue commands
-        # for the next tick. Same-priority devices must be independent.
-        for s in sorted(self._steppables,
-                        key=lambda device: getattr(device, "step_priority", 0)):
-            s.step(dt_s)
+        # Snapshot every phase before stepping. Additions and removals take
+        # effect on the next tick. Devices in one phase must be independent.
+        phases = tuple(tuple(self._steppables.get(priority, ()))
+                       for priority in STEP_PRIORITIES)
+        for group in phases:
+            for device in group:
+                device.step(dt_s)
         self.time_ms += dt_ms
 
     def advance_ms(self, duration_ms: float) -> None:

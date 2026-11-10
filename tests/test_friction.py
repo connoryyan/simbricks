@@ -13,7 +13,7 @@ from sim.clock import clock
 
 class FrictionTests(unittest.TestCase):
     def setUp(self):
-        self.old_models = clock._steppables.copy()
+        self.old_models = {priority: group.copy() for priority, group in clock._steppables.items()}
         self.old_time = clock.time_ms
         self.old_state = clock._initialization
         self.old_world = world.current_world

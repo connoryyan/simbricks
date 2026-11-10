@@ -14,7 +14,7 @@ import world
 
 class SensorMountTests(unittest.TestCase):
     def setUp(self):
-        self.previous_models = clock._steppables.copy()
+        self.previous_models = {priority: group.copy() for priority, group in clock._steppables.items()}
         self.previous_time = clock.time_ms
         self.previous_world = world.current_world
         clock._steppables.clear()
@@ -36,7 +36,9 @@ class SensorMountTests(unittest.TestCase):
         self.db.model.mount(sensor.model, 50, 10, -18, 15, 90, 5)
         self.assertPose(sensor.pose(), (50, 10, 10, 15, 90, 5))
         self.assertEqual(sensor.pose(), sensor.model.pose())
-        self.assertIs(self.db.model._mounts[0].model, sensor.model)
+        self.assertEqual(self.db.model._mounts[sensor.model], {
+            'forward_mm': 50, 'left_mm': 10, 'z_mm': 10, 'yaw_deg': 15,
+        })
         with self.assertRaises(AttributeError):
             sensor.model = ColorSensorModel()
 
