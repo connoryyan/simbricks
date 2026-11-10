@@ -36,3 +36,15 @@ the simulator binding, coordinate conventions and official implementation refere
 Optional finite wheel friction separates encoder odometry from actual body motion.
 Run `python -B examples/friction_test.py` for wheelspin and braking slip. See
 [docs/friction.md](docs/friction.md) for configuration and model limits.
+
+Install the test dependencies and run the tests from the repository root:
+
+```powershell
+python -m pip install -r requirements-dev.txt
+python -B -m pytest
+```
+
+Tests use pytest assertions and fixtures. Coverage includes `sim`, `pybricks`,
+`world`, `maps`, `render` and `examples`, with a required 100% statement and branch
+coverage. Open `htmlcov/index.html` for the detailed report. FFmpeg on PATH enables
+the real MP4 export test; encoder failure tests use a substitute process.

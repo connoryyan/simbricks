@@ -1,0 +1,10 @@
+[run]
+branch = True
+source = sim, pybricks, world, maps, render, examples
+
+[report]
+precision = 2
+fail_under = 100
+
+[html]
+directory = htmlcov

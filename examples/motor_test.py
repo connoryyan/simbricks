@@ -8,7 +8,7 @@ from pybricks.tools import wait
 import sim
 
 
-def init():
+def init(motor):
     pass
 
 motor = Motor(Port.A, Direction.CLOCKWISE)

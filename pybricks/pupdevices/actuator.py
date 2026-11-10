@@ -166,8 +166,7 @@ class Motor(DCMotor):
             self._apply_then(then, target_physical=start)
             return
 
-        if angle != 0:
-            self.run(direction * abs(speed))
+        self.run(direction * abs(speed))
 
         if wait:
             completed = clock.advance_until(reached, timeout_ms=60_000)
