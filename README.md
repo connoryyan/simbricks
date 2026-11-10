@@ -2,6 +2,11 @@
 
 A drop-in simulator for Pybricks MicroPython, re-implementing the Pybricks API on top of a small physics core, so unmodified robot scripts run against a virtual robot on computer. Because the same script also runs on a real LEGO hub, it supports a simulate-then-deploy workflow, and closing the sim-to-real gap through calibration against logged hardware data is a future goal.
 
+Simulation programs define their own `init` function. Use `sim.run(init, main)`
+or `sim.initialize(init)` to enter it before robot operations. Missing initialization
+raises `sim.NotInitializedError`. No drivebase, sensor or map is mandatory. See
+[docs/initialization.md](docs/initialization.md) for examples.
+
 Run the line-following example from the repository root:
 
 ```powershell

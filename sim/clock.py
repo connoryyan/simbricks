@@ -21,6 +21,7 @@ class SimClock:
         self.step_s = step_ms / 1000.0
         self.time_ms = 0
         self._steppables: set[Model] = set() # aggregation
+        self._initialization = None
 
     def add_steppable(self, steppable) -> None:
         '''

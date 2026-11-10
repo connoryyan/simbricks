@@ -1,3 +1,4 @@
+from tests.initialization_helpers import initialize_existing
 import math
 import subprocess
 import sys
@@ -42,8 +43,11 @@ class DriveBaseModelTests(unittest.TestCase):
             wheel_diameter=56, axle_track=112,
             left_sign=-1,
         )
+        initialize_existing()
         left.run(-360)
+        initialize_existing()
         right.run(360)
+        initialize_existing()
         wait(1000)
         self.assertGreater(body.distance_mm, 100)
         self.assertAlmostEqual(body.angle_deg, 0)
@@ -60,14 +64,19 @@ class DriveBaseModelTests(unittest.TestCase):
                     db = DriveBase(left, right, 56, 112)
                     self.assertIs(db.model._left, left.model)
                     self.assertIs(db.model._right, right.model)
+                    initialize_existing()
                     db.straight(300)
+                    initialize_existing()
                     wait(300)
                     x, y, heading = db.pose()
                     self.assertAlmostEqual(x, 300, delta=5)
                     self.assertAlmostEqual(y, 0, delta=5)
                     self.assertAlmostEqual(heading, 0, delta=2)
+                    initialize_existing()
                     db.turn(90)
+                    initialize_existing()
                     wait(300)
+                    initialize_existing()
                     self.assertAlmostEqual(db.angle(), 90, delta=2)
                     self.assertAlmostEqual(db.pose()[2], -90, delta=2)
 
@@ -75,18 +84,26 @@ class DriveBaseModelTests(unittest.TestCase):
         left = Motor(Port.A, Direction.COUNTERCLOCKWISE)
         right = Motor(Port.B)
         db = DriveBase(left, right, 56, 112)
+        initialize_existing()
         db.straight(300)
+        initialize_existing()
         wait(1500)
         pose = db.pose()
+        initialize_existing()
         distance = db.distance()
         left.reset_angle(123)
         right.reset_angle(-45)
+        initialize_existing()
         self.assertAlmostEqual(left.angle(), 123)
+        initialize_existing()
         self.assertAlmostEqual(right.angle(), -45)
+        initialize_existing()
         wait(10)
+        initialize_existing()
         self.assertAlmostEqual(db.distance(), distance, delta=1e-6)
         for before, after in zip(pose, db.pose()):
             self.assertAlmostEqual(before, after, delta=1e-6)
+        initialize_existing()
         self.assertAlmostEqual(db.state()[1], 0, delta=1e-6)
 
     def test_turn_rate_uses_wheel_directions(self):
@@ -96,8 +113,11 @@ class DriveBaseModelTests(unittest.TestCase):
             left_model=left, right_model=right,
             wheel_diameter=56, axle_track=112, left_sign=-1,
         )
+        initialize_existing()
         left.run(-360)
+        initialize_existing()
         right.run(-360)
+        initialize_existing()
         wait(1000)
         self.assertAlmostEqual(body.speed_mm_s(), 0)
         expected = math.degrees(720 * body.mm_per_deg / 112)

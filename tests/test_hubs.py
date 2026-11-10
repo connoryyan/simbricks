@@ -1,3 +1,4 @@
+from tests.initialization_helpers import initialize_existing
 import unittest
 
 from pybricks.hubs import PrimeHub, InventorHub
@@ -28,42 +29,62 @@ class HubTests(unittest.TestCase):
         robot = self.robot()
         robot.use_gyro(True)
         timer = StopWatch()
+        initialize_existing()
         while not hub.imu.ready() and timer.time() < 2000:
+            initialize_existing()
             wait(10)
+        initialize_existing()
         self.assertTrue(hub.imu.ready())
+        initialize_existing()
         hub.imu.reset_heading(0)
         self.assertIs(hub.imu.model, robot.model.imu)
+        initialize_existing()
         robot.turn(90)
+        initialize_existing()
         wait(500)
+        initialize_existing()
         self.assertAlmostEqual(hub.imu.heading(), 90, delta=1)
+        initialize_existing()
         self.assertAlmostEqual(robot.angle(), hub.imu.heading())
         with self.assertRaises(OSError):
+            initialize_existing()
             hub.imu.reset_heading(0)
         robot.stop()
+        initialize_existing()
         hub.imu.reset_heading(0)
+        initialize_existing()
         self.assertEqual(robot.angle(), 0)
+        initialize_existing()
         self.assertEqual(hub.imu.up(), Side.TOP)
 
     def test_hub_calibrates_before_drivebase_exists(self):
         hub = PrimeHub()
+        initialize_existing()
         wait(1100)
+        initialize_existing()
         self.assertTrue(hub.imu.ready())
         model = hub.imu.model
         robot = self.robot()
         self.assertIs(robot.model.imu, model)
+        initialize_existing()
         self.assertTrue(hub.imu.ready())
 
     def test_hub_created_after_drivebase_adopts_existing_imu(self):
         robot = self.robot()
         robot.use_gyro(True)
+        initialize_existing()
         robot.turn(45)
         robot.stop()
+        initialize_existing()
         wait(3000)
         model = robot.model.imu
+        initialize_existing()
         heading = model.heading()
         hub = PrimeHub()
         self.assertIs(hub.imu.model, model)
+        initialize_existing()
         self.assertAlmostEqual(hub.imu.heading(), heading)
+        initialize_existing()
         self.assertTrue(hub.imu.ready())
 
     def test_multiple_hub_handles_share_hardware(self):
@@ -73,26 +94,40 @@ class HubTests(unittest.TestCase):
         self.assertIs(first.imu.model, second.imu.model)
         self.assertIs(first.imu.model, robot.model.imu)
         first.model.pressed_buttons.add(Button.LEFT)
+        initialize_existing()
         self.assertEqual(second.buttons.pressed(), {Button.LEFT})
+        initialize_existing()
         second.buttons.pressed().clear()
+        initialize_existing()
         self.assertEqual(first.buttons.pressed(), {Button.LEFT})
 
     def test_force_sensor_methods_use_scripted_measurements(self):
         sensor = ForceSensor(Port.A)
+        initialize_existing()
         self.assertEqual(sensor.force(), 0)
+        initialize_existing()
         self.assertEqual(sensor.distance(), 0)
+        initialize_existing()
         self.assertFalse(sensor.pressed())
+        initialize_existing()
         self.assertFalse(sensor.touched())
         sensor.model.set_measurement(force_n=0, distance_mm=0.2)
+        initialize_existing()
         self.assertTrue(sensor.touched())
+        initialize_existing()
         self.assertFalse(sensor.pressed())
         sensor.model.set_measurement(force_n=4, distance_mm=5)
+        initialize_existing()
         self.assertEqual(sensor.force(), 4)
+        initialize_existing()
         self.assertEqual(sensor.distance(), 5)
+        initialize_existing()
         self.assertTrue(sensor.pressed())
+        initialize_existing()
         self.assertFalse(sensor.pressed(force=5))
         with self.assertRaises(ValueError):
             sensor.model.set_measurement(11, 0)
+        initialize_existing()
         self.assertEqual(sensor.force(), 4)
 
     def test_unsupported_hub_mounting_is_explicit(self):

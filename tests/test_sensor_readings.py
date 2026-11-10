@@ -1,3 +1,4 @@
+from tests.initialization_helpers import initialize_existing
 from maps.straight_line.world import LineWorld
 from maps.scriptable.world import ScriptableWorld
 from maps.flat_white.world import FlatWhiteWorld
@@ -27,45 +28,62 @@ class SensorReadingTests(unittest.TestCase):
         sensor = ColorSensor(Port.C)
         sensor.set_pose(0, y, height, yaw)
         sensor.set_tilt(pitch)
+        initialize_existing()
         return sensor
 
     def test_height_changes_signal_strength(self):
+        initialize_existing()
         self.assertEqual(self.color_at(1e-300).reflection(), 85)
+        initialize_existing()
         self.assertEqual(self.color_at(5).reflection(), 85)
+        initialize_existing()
         self.assertEqual(self.color_at(10).reflection(), 85)
+        initialize_existing()
         self.assertEqual(self.color_at(20).reflection(), 21)
+        initialize_existing()
         self.assertEqual(self.color_at(40).reflection(), 5)
 
     def test_tilt_changes_both_distance_and_incidence(self):
+        initialize_existing()
         self.assertEqual(self.color_at(10, 45).reflection(), 30)
+        initialize_existing()
         self.assertEqual(self.color_at(10, 30).reflection(), 11)
 
     def test_sensor_looks_at_ray_hit_instead_of_point_below_it(self):
         world.current_world = LineWorld(ambient_light=0)
         sensor = self.color_at(10, 45, -90, y=15)
+        initialize_existing()
         self.assertEqual(sensor.reflection(), 4)
         sensor.set_pose(0, 15, 10, 90)
+        initialize_existing()
         self.assertEqual(sensor.reflection(), 30)
         sensor.set_tilt(90)
+        initialize_existing()
         self.assertEqual(sensor.reflection(), 85)
 
     def test_unseen_surface_returns_zero(self):
         for height, pitch in ((10, 0), (10, -90), (0, 90), (101, 90)):
             with self.subTest(height=height, pitch=pitch):
+                initialize_existing()
                 self.assertEqual(self.color_at(height, pitch).reflection(), 0)
         # Vertical height is in range, but the oblique path is too long.
+        initialize_existing()
         self.assertEqual(self.color_at(80, 30).reflection(), 0)
 
     def test_range_boundary_is_inclusive(self):
+        initialize_existing()
         self.assertEqual(self.color_at(100).reflection(), 1)
+        initialize_existing()
         self.assertEqual(self.color_at(100.001).reflection(), 0)
 
     def test_roll_does_not_change_centre_ray(self):
         sensor = self.color_at(10, 45, 30)
         direction = sensor.model.view_direction()
+        initialize_existing()
         reading = sensor.reflection()
         sensor.set_tilt(45, 123)
         self.assertEqual(sensor.model.view_direction(), direction)
+        initialize_existing()
         self.assertEqual(sensor.reflection(), reading)
         self.assertAlmostEqual(sum(v * v for v in direction), 1)
 
@@ -73,6 +91,7 @@ class SensorReadingTests(unittest.TestCase):
         sensor = ColorSensorModel(reference_distance_mm=20, max_distance_mm=200)
         sensor.set_pose(0, 0, 20, 0)
         sensor.set_tilt(90)
+        initialize_existing()
         self.assertEqual(sensor.reflection(), 85)
         for kwargs in ({"reference_distance_mm": 0},
                        {"max_distance_mm": float("nan")},
@@ -89,7 +108,9 @@ class SensorReadingTests(unittest.TestCase):
         for sensor in (first, second):
             sensor.set_pose(0, 0, 10, 0)
             sensor.set_tilt(90)
+        initialize_existing()
         a = [first.reflection() for _ in range(30)]
+        initialize_existing()
         b = [second.reflection() for _ in range(30)]
         self.assertEqual(a, b)
         self.assertTrue(all(isinstance(v, int) and 0 <= v <= 100 for v in a))
@@ -106,14 +127,19 @@ class SensorReadingTests(unittest.TestCase):
     def test_ultrasonic_uses_height_and_pitch(self):
         sensor = UltrasonicSensor(Port.D)
         sensor.set_pose(0, 0, 100, 0)
+        initialize_existing()
         self.assertEqual(sensor.distance(), 2000)
         sensor.set_tilt(90)
+        initialize_existing()
         self.assertEqual(sensor.distance(), 100)
         sensor.set_tilt(30)
+        initialize_existing()
         self.assertEqual(sensor.distance(), 200)
         sensor.set_pose(0, 0, 50, 0)
+        initialize_existing()
         self.assertEqual(sensor.distance(), 100)
         sensor.set_tilt(-90)
+        initialize_existing()
         self.assertEqual(sensor.distance(), 2000)
 
     def test_no_surface_returns_configured_ambient_light(self):
@@ -121,38 +147,51 @@ class SensorReadingTests(unittest.TestCase):
         for height, pitch in ((10, 0), (10, -90), (101, 90), (80, 30)):
             with self.subTest(height=height, pitch=pitch):
                 sensor = self.color_at(height, pitch)
+                initialize_existing()
                 self.assertEqual(sensor.reflection(), 17)
+                initialize_existing()
                 self.assertEqual(sensor.ambient(), 17)
 
     def test_active_signal_fades_towards_ambient(self):
         world.current_world = FlatWhiteWorld(ambient_light=10)
         sensor = self.color_at(10)
+        initialize_existing()
         self.assertEqual(sensor.reflection(), 95)
+        initialize_existing()
         self.assertEqual(sensor.ambient(), 10)
         sensor.set_pose(0, 0, 20, 0)
+        initialize_existing()
         self.assertEqual(sensor.reflection(), 31)
         sensor.set_pose(0, 0, 200, 0)
+        initialize_existing()
         self.assertEqual(sensor.reflection(), 10)
         world.current_world.ambient_light = 25
+        initialize_existing()
         self.assertEqual(sensor.reflection(), 25)
         world.current_world = LineWorld(ambient_light=12)
+        initialize_existing()
         self.assertEqual(sensor.ambient(), 12)
 
     def test_ambient_and_total_signal_are_bounded(self):
         world.current_world = FlatWhiteWorld(ambient_light=40)
         sensor = self.color_at(10)
+        initialize_existing()
         self.assertEqual(sensor.reflection(), 100)
+        initialize_existing()
         self.assertEqual(sensor.ambient(), 40)
         for value in (-1, 101, float("nan"), float("inf")):
             with self.assertRaises(ValueError):
                 world.current_world.ambient_light = value
+        initialize_existing()
         self.assertEqual(sensor.ambient(), 40)
 
     def test_default_ambient_is_shared_by_world_types(self):
         sensor = self.color_at(200)
         for field in (FlatWhiteWorld(), LineWorld(), ScriptableWorld()):
             world.current_world = field
+            initialize_existing()
             self.assertEqual(sensor.ambient(), 5)
+            initialize_existing()
             self.assertEqual(sensor.reflection(), 5)
 
 

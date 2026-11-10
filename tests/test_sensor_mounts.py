@@ -1,3 +1,4 @@
+from tests.initialization_helpers import initialize_existing
 from maps.scriptable.world import ScriptableWorld
 import math
 import unittest
@@ -54,8 +55,11 @@ class SensorMountTests(unittest.TestCase):
         )
         for sensor, *args in mounts:
             self.db.model.mount(sensor.model, *args)
+        initialize_existing()
         self.db.straight(300)
+        initialize_existing()
         self.db.turn(90)
+        initialize_existing()
         wait(300)
         x, y, yaw = self.db.pose()
         c, s = math.cos(math.radians(yaw)), math.sin(math.radians(yaw))
@@ -118,7 +122,9 @@ class SensorMountTests(unittest.TestCase):
         self.db.model.mount(ultrasonic.model, above_mm=22)
         field.set_reflection(20)
         field.set_distance(350)
+        initialize_existing()
         self.assertEqual(color.reflection(), 25)
+        initialize_existing()
         self.assertEqual(ultrasonic.distance(), 350)
 
 

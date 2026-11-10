@@ -1,3 +1,4 @@
+from sim.initialization import requires_init
 import math
 from abc import ABC, abstractmethod
 
@@ -75,6 +76,7 @@ class DCMotor(Actuator):
     def __init__(self, port: Port, positive_direction: Direction = Direction.CLOCKWISE):
         super().__init__(port, positive_direction)
 
+    @requires_init
     def dc(self, duty: float) -> None:
         '''
         Run the motor at a duty cycle.
@@ -114,11 +116,13 @@ class Motor(DCMotor):
     def positive_direction(self) -> Direction:
         return self._direction
 
+    @requires_init
     def run(self, speed: float):
         if not math.isfinite(speed):
             raise ValueError("speed must be finite")
         self._model.run(self._direction.value * speed)
 
+    @requires_init
     def run_time(self, speed: float, time: float, 
                  then: Stop = Stop.HOLD, wait: bool = True):
         if not isinstance(then, Stop):
@@ -131,6 +135,7 @@ class Motor(DCMotor):
             clock.advance_ms(time)
             self._apply_then(then)
 
+    @requires_init
     def run_angle(self, speed: float, angle: float, 
                   then: Stop = Stop.HOLD, wait: bool = True) -> None:
         '''
@@ -191,18 +196,22 @@ class Motor(DCMotor):
     def _physical_angle(self) -> float:
         return self._direction.value * self._model.get_angle()
 
+    @requires_init
     def angle(self):
         return self._physical_angle() - self._angle_offset
 
+    @requires_init
     def speed(self):
         return self._direction.value * self._model.get_speed()
 
     def reset_angle(self, angle: float = 0.0) -> None:
         self._angle_offset = self._physical_angle() - float(angle)
     
+    @requires_init
     def stalled(self) -> bool:
         return self._model.is_stalled()
 
+    @requires_init
     def hold(self) -> None:
         self._action = None
         self._model.hold()

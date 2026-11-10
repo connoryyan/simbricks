@@ -1,3 +1,4 @@
+from tests.initialization_helpers import initialize_existing
 import unittest
 
 from pybricks.parameters import Direction, Port, Stop
@@ -34,37 +35,53 @@ class MotorMoveTests(unittest.TestCase):
                 with self.subTest(direction=direction, speed=speed, angle=angle):
                     clock._steppables.clear()
                     motor = Motor(Port.A, direction)
+                    initialize_existing()
                     motor.run_angle(300, 120)
+                    initialize_existing()
                     wait(2500)
                     motor.reset_angle(37)
+                    initialize_existing()
                     start = motor.angle()
                     before = clock.time_ms
+                    initialize_existing()
                     motor.run_angle(speed, angle)
                     self.assertGreater(clock.time_ms, before)
                     self.assertLess(clock.time_ms - before, 2000)
+                    initialize_existing()
                     wait(2500)
                     expected = start + (90 if speed * angle > 0 else -90)
+                    initialize_existing()
                     self.assertAlmostEqual(motor.angle(), expected, delta=0.1)
+                    initialize_existing()
                     self.assertAlmostEqual(motor.speed(), 0, delta=0.1)
 
     def test_run_time_defaults_to_hold(self):
         motor = Motor(Port.A)
+        initialize_existing()
         motor.run_time(300, 100)
+        initialize_existing()
         held_angle = motor.angle()
+        initialize_existing()
         wait(2500)
+        initialize_existing()
         self.assertAlmostEqual(motor.angle(), held_angle, delta=0.1)
+        initialize_existing()
         self.assertAlmostEqual(motor.speed(), 0, delta=0.1)
 
     def test_zero_angle_does_not_start_or_advance_time(self):
         motor = Motor(Port.A)
+        initialize_existing()
         motor.run_angle(0, 0)
         self.assertEqual(clock.time_ms, 0)
+        initialize_existing()
         self.assertEqual(motor.angle(), 0)
         self.assertEqual(motor.model._target_speed_dps, 0)
 
     def test_invalid_arguments_do_not_change_running_motor(self):
         motor = Motor(Port.A)
+        initialize_existing()
         motor.run(123)
+        initialize_existing()
         invalid_moves = (
             lambda: motor.run_angle(300, 90, then=None),
             lambda: motor.run_time(300, 100, then=None),
@@ -83,10 +100,14 @@ class MotorMoveTests(unittest.TestCase):
 
     def test_explicit_brake_mode(self):
         motor = Motor(Port.A)
+        initialize_existing()
         motor.run_angle(-300, 90, then=Stop.BRAKE)
+        initialize_existing()
         self.assertLessEqual(motor.angle(), -90)
         self.assertTrue(motor.model._braking)
+        initialize_existing()
         wait(1000)
+        initialize_existing()
         self.assertAlmostEqual(motor.speed(), 0, delta=0.01)
 
 

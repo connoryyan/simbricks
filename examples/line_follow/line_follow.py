@@ -10,6 +10,7 @@ from pybricks.robotics import DriveBase
 from pybricks.pupdevices import ColorSensor, Motor, UltrasonicSensor
 from pybricks.parameters import Direction, Port
 from sim.clock import clock
+import sim
 from render.video import PoseRecorder, save_video
 
 
@@ -22,6 +23,13 @@ STOP_DISTANCE_MM = 100
 TIMEOUT_MS = 90_000
 
 
+left = Motor(Port.A, Direction.COUNTERCLOCKWISE)
+right = Motor(Port.B)
+db = DriveBase(left, right, wheel_diameter=56, axle_track=112)
+color = ColorSensor(Port.C)
+ultrasonic = UltrasonicSensor(Port.D)
+
+
 def init():
     '''
     Create the map, robot and mounted sensors.
@@ -29,22 +37,15 @@ def init():
     Returns:
         LineFollowWorld: Map used by the robot.
     '''
-    global left, right, db, color, ultrasonic
     field = LineFollowWorld()
     world.current_world = field
-
-    left = Motor(Port.A, Direction.COUNTERCLOCKWISE)
-    right = Motor(Port.B)
-    db = DriveBase(left, right, wheel_diameter=56, axle_track=112)
-    color = ColorSensor(Port.C)
-    ultrasonic = UltrasonicSensor(Port.D)
-
+    
     db.model.mount(color.model, forward_mm=40, left_mm=10,
                    above_mm=-18, pitch_deg=90)
-    db.model.mount(ultrasonic.model, forward_mm=60,
-                   above_mm=32, pitch_deg=0)
+    db.model.mount(ultrasonic.model, forward_mm=60, above_mm=32)
     db.model.place(50, 0, heading_deg=0)
     return field
+field = sim.initialize(init)
 
 
 def run(recording=None):
@@ -57,7 +58,6 @@ def run(recording=None):
     Returns:
         tuple: Map, robot, recorded poses and final obstacle distance.
     '''
-    field = init()
     recorder = None
     if recording is not None:
         recorder = PoseRecorder(db, (color, ultrasonic), recording, clock)

@@ -8,20 +8,35 @@ from pybricks.parameters import Axis, Direction, Port
 from pybricks.pupdevices import Motor
 from pybricks.robotics import DriveBase
 from pybricks.tools import wait
+import sim
+import world
+from maps.flat_white.world import FlatWhiteWorld
+
+
+hub = PrimeHub()
+left = Motor(Port.B, Direction.COUNTERCLOCKWISE)
+right = Motor(Port.D)
+db = DriveBase(left, right, wheel_diameter=56, axle_track=112)
+db.use_gyro(True)
+
+
+def init(robot):
+    '''
+    Set up the robot devices, initial position and field.
+    '''
+    world.current_world = FlatWhiteWorld()
+    robot.model.place(0, 0, 0)
+sim.initialize(init, db)
 
 
 def main():
     '''
     Calibrate a level IMU and make a gyro-controlled clockwise turn.
     '''
-    hub = PrimeHub()
-    left = Motor(Port.B, Direction.COUNTERCLOCKWISE)
-    right = Motor(Port.D)
-    db = DriveBase(left, right, wheel_diameter=56, axle_track=112)
-    db.use_gyro(True)
     imu = hub.imu
     while not imu.ready():
         wait(10)
+
     print('Ready:', imu.ready(), 'Tilt:', imu.tilt())
     imu.reset_heading(0)
     db.turn(90)

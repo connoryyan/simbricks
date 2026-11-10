@@ -33,14 +33,23 @@ if __name__ == '__main__':
 Generate the preview from the repository root with
 `python -B -m maps.my_map.world`.
 
-Select the map before creating or running a robot:
+Select the map in the program-defined initializer:
 
 ```python
+import sim
 import world
 from maps.my_map.world import MyWorld
 
-world.current_world = MyWorld()
+
+def init():
+    world.current_world = MyWorld()
+
+
+sim.initialize(init)
 ```
+
+See [initialization.md](../docs/initialization.md) for the initialization convention.
+Each program chooses which devices, mounts and places it needs.
 
 `World` combines ground reflection, all lines and the nearest obstacle hit.
 Override `get_ambient_at()` for spatial lighting. Create a `Line` subclass to

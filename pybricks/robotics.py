@@ -1,3 +1,4 @@
+from sim.initialization import requires_init
 import math
 
 from sim.clock import clock
@@ -183,6 +184,7 @@ class DriveBase:
             self._left.brake()
             self._right.brake()
 
+    @requires_init
     def drive(self, speed: float, turn_rate: float) -> None:
         self._maneuver = None
         if self._use_gyro:
@@ -203,24 +205,30 @@ class DriveBase:
         self._left.brake()
         self._right.brake()
 
+    @requires_init
     def straight(self, distance: float, then: Stop = Stop.HOLD, wait: bool = True) -> None:
         self._start(distance, 0.0, then, wait)
 
+    @requires_init
     def turn(self, angle: float, then: Stop = Stop.HOLD, wait: bool = True) -> None:
         self._start(0.0, angle, then, wait)
 
+    @requires_init
     def done(self) -> bool:
         return self._maneuver is None
 
     def stalled(self) -> bool:
         return False  # no load/torque model yet
 
+    @requires_init
     def distance(self) -> float:
         return self._distance
 
+    @requires_init
     def angle(self) -> float:
         return self._angle
 
+    @requires_init
     def state(self) -> tuple[float, float, float, float]:
         turn_rate = (-self._model.imu.calibrated_rate if self._use_gyro
                      else self._model.turn_rate_dps())

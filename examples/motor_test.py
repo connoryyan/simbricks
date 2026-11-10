@@ -5,8 +5,14 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from pybricks.pupdevices import Motor
 from pybricks.parameters import Port, Direction
 from pybricks.tools import wait
+import sim
+
+
+def init():
+    pass
 
 motor = Motor(Port.A, Direction.CLOCKWISE)
+sim.initialize(init, motor)
 
 print("t=0ms  angle=%.1f speed=%.1f" % (motor.angle(), motor.speed()))
 

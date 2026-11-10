@@ -1,6 +1,8 @@
+from sim.initialization import requires_init
 from sim.clock import clock
 
 
+@requires_init
 def wait(time_ms: float) -> None:
     clock.advance_ms(time_ms)
 

@@ -27,12 +27,23 @@ from pybricks.parameters import Axis, Direction, Port
 from pybricks.pupdevices import Motor
 from pybricks.robotics import DriveBase
 from pybricks.tools import wait
+import sim
+import world
+from maps.flat_white.world import FlatWhiteWorld
 
 hub = PrimeHub()
 left = Motor(Port.B, Direction.COUNTERCLOCKWISE)
 right = Motor(Port.D)
 db = DriveBase(left, right, wheel_diameter=56, axle_track=112)
 db.use_gyro(True)
+
+
+def init():
+    world.current_world = FlatWhiteWorld()
+    db.model.place(0, 0, 0)
+
+
+sim.initialize(init)
 while not hub.imu.ready():
     wait(10)
 hub.imu.reset_heading(0)
@@ -44,7 +55,7 @@ print(imu.rotation(-Axis.Z))         # clockwise accumulated rotation
 ```
 
 `PrimeHub` and `InventorHub` share one simulated physical hub per clock session.
-The IMU implementation is internal to `pybricks/_common/imu.py`; user programs
+The IMU interface is defined in `pybricks/pupdevices/sensor.py`; user programs
 access it through `hub.imu`. Creating a drive base connects the hub automatically.
 Creating a hub after one drive base also connects it to that body's existing IMU.
 The hub can calibrate before motors or a drive base exist. Multiple independent

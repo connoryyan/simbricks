@@ -1,3 +1,4 @@
+from tests.initialization_helpers import initialize_existing
 import contextlib
 import io
 import math
@@ -64,6 +65,7 @@ class LineFollowTests(unittest.TestCase):
         self.assertIs(field, world.current_world)
         self.assertGreater(len(frames), 1)
         self.assertGreater(frames[-1][0], 0.5)
+        initialize_existing()
         self.assertAlmostEqual(example.db.state()[1], 0, delta=0.01)
         self.assertFalse(any(type(item).__name__ == 'PoseRecorder' for item in clock._steppables))
 
@@ -122,6 +124,7 @@ class LineFollowTests(unittest.TestCase):
         self.assertGreater(db.pose()[0], 2100)
         self.assertGreater(distance, STOP_DISTANCE_MM - SPEED_MM_S * 0.2)
         self.assertLessEqual(distance, STOP_DISTANCE_MM)
+        initialize_existing()
         self.assertAlmostEqual(db.state()[1], 0, delta=0.01)
         # Check a conservative 65 mm body radius against the obstacle footprint.
         box = field.obstacles[0]

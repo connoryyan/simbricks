@@ -1,5 +1,6 @@
+from sim.initialization import requires_init
 from .parameters import Axis
-from ._common.imu import IMU
+from .pupdevices.sensor import IMU
 from sim.hub import get_hub
 
 
@@ -7,6 +8,7 @@ class _Buttons:
     def __init__(self, model):
         self._model = model
 
+    @requires_init
     def pressed(self):
         '''
         Return the currently pressed hub buttons.
