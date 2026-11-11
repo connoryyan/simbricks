@@ -3,15 +3,35 @@ from world import World, Polyline, BoxObstacle
 
 class LineFollowWorld(World):
     '''
-    Simulate a winding 20 mm black line with a 150 mm obstacle at the end.
+    Provide a winding black track ending at a 150 mm high box.
+
+    Attributes:
+        ambient_light (float): Uniform ambient light signal from 0 to 100.
+        reflection (float): Ground reflection outside lines, from 0 to 100.
+        bounds (tuple): Preview rectangle (xmin, ymin, xmax, ymax) in world mm.
+        lines (list): Ground lines contributing to reflection readings.
+        obstacles (list): Obstacle shapes tested by surface rays.
+        friction_coefficient (float): Uniform non-negative ground friction coefficient.
+        _friction_coefficient (float): Stored coefficient backing friction_coefficient.
+        _ambient_light (float): Stored ambient signal backing ambient_light.
+        line_width_mm (float): Configured track width in mm.
+        black_reflection (int): Configured black line reflection from 0 to 100.
+        edge_width_mm (float): Width of the reflection blend at the line edge, in mm.
+        path (list): Connected track center points (x, y) in world mm.
     '''
 
-    def __init__(self, *, ambient_light: float = 5.0):
+    def __init__(self, *, ambient_light: float = 5.0) -> None:
+        '''
+        Create a winding black line ending at a 150 mm obstacle.
+
+        Arg:
+            ambient_light (float): Ambient light from 0 to 100.
+        '''
         super().__init__(reflection=85, ambient_light=ambient_light)
-        self.line_width_mm = 20.0
-        self.black_reflection = 10
-        self.edge_width_mm = 4.0
-        self.path = [(0.0, 0.0), (250.0, 0.0)]
+        self.line_width_mm: float = 20.0
+        self.black_reflection: int = 10
+        self.edge_width_mm: float = 4.0
+        self.path: list[tuple[float, float]] = [(0.0, 0.0), (250.0, 0.0)]
         curves = (
             ((250, 0), (450, 0), (450, 250), (650, 250)),
             ((650, 250), (850, 250), (900, -150), (1100, -150)),
@@ -29,7 +49,7 @@ class LineFollowWorld(World):
                                reflection=self.black_reflection, edge_width_mm=self.edge_width_mm))
         self.add_obstacle(BoxObstacle(2300, -100, 2450, 100, 150))
 
-    def distance_to_line(self, x_mm, y_mm):
+    def distance_to_line(self, x_mm: float, y_mm: float) -> float:
         '''
         Return the distance to the track centre in mm.
         '''

@@ -1,21 +1,34 @@
 import math
 from abc import ABC, abstractmethod
+from sim.validation import number, sequence, vector
 
 
 class Line(ABC):
     '''
-    Define a ground line and its preview.
+    Define a ground line with a blended reflection edge.
+
+    Attributes:
+        width_mm (float): Total line width in mm.
+        reflection (float): Reflection from 0 to 100.
+        edge_width_mm (float): Width of the reflection blend at the line edge, in mm.
     '''
-    def __init__(self, width_mm=20.0, reflection=10, edge_width_mm=4.0):
-        if not all(math.isfinite(v) and v > 0 for v in (width_mm, edge_width_mm)):
-            raise ValueError("Line widths must be finite and positive")
+    def __init__(self, width_mm: float = 20.0, reflection: float = 10, edge_width_mm: float = 4.0) -> None:
+        '''
+        Create the shared ground line appearance.
+
+        Arg:
+            width_mm (float): Positive line width in mm.
+            reflection (float): Line reflection from 0 to 100.
+            edge_width_mm (float): Positive edge blend width, no wider than the line.
+        '''
+        number(width_mm, 'width_mm', positive=True)
+        number(edge_width_mm, 'edge_width_mm', positive=True)
         if edge_width_mm > width_mm:
             raise ValueError("Edge width cannot exceed line width")
-        if not math.isfinite(reflection) or not 0 <= reflection <= 100:
-            raise ValueError("Line reflection must be between 0 and 100")
-        self.width_mm = width_mm
-        self.reflection = reflection
-        self.edge_width_mm = edge_width_mm
+        number(reflection, 'reflection', minimum=0, maximum=100)
+        self.width_mm: float = width_mm
+        self.reflection: float = reflection
+        self.edge_width_mm: float = edge_width_mm
 
     @abstractmethod
     def distance_to(self, x_mm: float, y_mm: float) -> float:
@@ -24,10 +37,11 @@ class Line(ABC):
         '''
         raise NotImplementedError
 
-    def get_reflection_at(self, x_mm, y_mm, background):
+    def get_reflection_at(self, x_mm: float, y_mm: float, background) -> float:
         '''
         Blend the line reflection into the background at its edge.
         '''
+        number(background, 'background', minimum=0, maximum=100)
         distance = self.distance_to(x_mm, y_mm)
         blend = (distance - self.width_mm/2 + self.edge_width_mm/2) / self.edge_width_mm
         blend = max(0.0, min(1.0, blend))
@@ -43,33 +57,52 @@ class Line(ABC):
 
 class Polyline(Line):
     '''
-    Represent a line with connected points in mm.
+    Represent a ground line as connected straight segments.
+
+    Attributes:
+        width_mm (float): Total line width in mm.
+        reflection (float): Reflection from 0 to 100.
+        edge_width_mm (float): Width of the reflection blend at the line edge, in mm.
+        points (tuple): Connected (x, y) world points in mm.
+        _segments (list): Cached (x, y, dx, dy, squared_length) tuples for each segment.
     '''
-    def __init__(self, points, width_mm=20.0, reflection=10, edge_width_mm=4.0):
+    def __init__(self, points, width_mm: float = 20.0, reflection: float = 10, edge_width_mm: float = 4.0) -> None:
+        '''
+        Create a line from connected two-dimensional points.
+
+        Arg:
+            points (list | tuple): At least two distinct neighboring points in mm.
+            width_mm (float): Positive line width in mm.
+            reflection (float): Line reflection from 0 to 100.
+            edge_width_mm (float): Positive edge blend width in mm.
+        '''
         super().__init__(width_mm, reflection, edge_width_mm)
-        self.points = tuple(tuple(float(v) for v in point) for point in points)
-        if len(self.points) < 2 or any(len(p) != 2 or not all(math.isfinite(v) for v in p)
-                                      for p in self.points):
-            raise ValueError("A line needs at least two finite 2D points")
-        self._segments = []
+        sequence(points, 'points')
+        if len(points) < 2:
+            raise ValueError('A line needs at least two points')
+        self.points: tuple[tuple[float, float], ...] = tuple(vector(point, 'point', 2) for point in points)
+        self._segments: list[tuple[float, float, float, float, float]] = []
         for (x, y), (end_x, end_y) in zip(self.points, self.points[1:]):
             dx, dy = end_x-x, end_y-y
             length_sq = dx*dx + dy*dy
+            number(length_sq, 'Segment squared length')
             if length_sq == 0:
                 raise ValueError("Consecutive line points must be different")
             self._segments.append((x, y, dx, dy, length_sq))
 
-    def distance_to(self, x_mm, y_mm):
+    def distance_to(self, x_mm: float, y_mm: float) -> float:
         '''
         Return the shortest distance to any segment in mm.
         '''
+        number(x_mm, 'x_mm')
+        number(y_mm, 'y_mm')
         nearest = math.inf
         for x, y, dx, dy, length_sq in self._segments:
             t = max(0.0, min(1.0, ((x_mm-x)*dx + (y_mm-y)*dy) / length_sq))
             nearest = min(nearest, (x_mm-x-t*dx)**2 + (y_mm-y-t*dy)**2)
         return math.sqrt(nearest)
 
-    def to_svg(self):
+    def to_svg(self) -> str:
         '''
         Return the line as an SVG element.
         '''

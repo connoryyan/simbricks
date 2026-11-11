@@ -13,6 +13,10 @@ Run the line-following example from the repository root:
 python -B examples/line_follow/line_follow.py
 ```
 
+For a map using force contact, finite wheel friction and gyro feedback, run
+`python -B examples/force_contact/force_contact.py`. It saves a video beside the
+script. See [examples/force_contact/README.md](examples/force_contact/README.md).
+
 The map has a winding 20 mm black line and a 150 mm high obstacle at its end.
 The robot starts on the line centre. A downward colour sensor sits 10 mm above
 the ground and 10 mm left of the robot centre, so it follows the left line edge
@@ -39,6 +43,14 @@ Run `python -B examples/friction_test.py` for wheelspin and braking slip. See
 
 Motors accept `gears=[12, 36]` or multiple gear trains. Angles and speeds use
 the output shaft, including DriveBase odometry. See [docs/gears.md](docs/gears.md).
+
+DriveBase moves default to `Stop.HOLD`, which actively holds both wheel shaft
+positions after the move. `Stop.BRAKE` applies passive braking, while `Stop.COAST`
+and `Stop.COAST_SMART` release the wheels. New drive commands release the hold.
+Call `robot.hold()` to cancel an active move and hold the current wheel positions.
+
+Public APIs reject incorrect argument types and values before changing simulation
+state. See [docs/validation.md](docs/validation.md) for the parameter rules.
 
 Install the test dependencies and run the tests from the repository root:
 

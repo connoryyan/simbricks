@@ -5,15 +5,26 @@ from pathlib import Path
 from .line import Line
 from .obstacle import Obstacle
 from .surface import SurfaceHit
+from sim.validation import number, sequence, unit_vector, vector
 
 
 class World(ABC):
     '''
-    Define a map with ground lines, obstacles and ambient light.
+    Store ground appearance, lines, obstacles and friction.
+
+    Attributes:
+        ambient_light (float): Uniform ambient light signal from 0 to 100.
+        reflection (float): Ground reflection outside lines, from 0 to 100.
+        bounds (tuple): Preview rectangle (xmin, ymin, xmax, ymax) in world mm.
+        lines (list): Ground lines contributing to reflection readings.
+        obstacles (list): Obstacle shapes tested by surface rays.
+        friction_coefficient (float): Uniform non-negative ground friction coefficient.
+        _friction_coefficient (float): Stored coefficient backing friction_coefficient.
+        _ambient_light (float): Stored ambient signal backing ambient_light.
     '''
     @abstractmethod
-    def __init__(self, ambient_light: float = 15.0, *, reflection=85,
-                 bounds=(-100, -380, 2600, 320), friction_coefficient=0.8):
+    def __init__(self, ambient_light: float = 15.0, *, reflection: float = 85,
+                 bounds = (-100, -380, 2600, 320), friction_coefficient: float = 0.8) -> None:
         '''
         Create the common map state.
 
@@ -23,30 +34,36 @@ class World(ABC):
             bounds (tuple): Preview xmin, ymin, xmax and ymax in mm.
             friction_coefficient (float): Ground friction coefficient.
         '''
-        if not math.isfinite(reflection) or not 0 <= reflection <= 100:
-            raise ValueError("Ground reflection must be between 0 and 100")
-        if (len(bounds) != 4 or not all(math.isfinite(v) for v in bounds)
-                or bounds[0] >= bounds[2] or bounds[1] >= bounds[3]):
+        number(reflection, 'reflection', minimum=0, maximum=100)
+        bounds = vector(bounds, 'bounds', 4)
+        if bounds[0] >= bounds[2] or bounds[1] >= bounds[3]:
             raise ValueError("Preview bounds must form a finite rectangle")
-        self.ambient_light = ambient_light
-        self.reflection = reflection
-        self.bounds = bounds
+        self.ambient_light: float = ambient_light
+        self.reflection: float = reflection
+        self.bounds: tuple[float, float, float, float] = bounds
         self.lines: list[Line] = []
         self.obstacles: list[Obstacle] = []
-        self.friction_coefficient = friction_coefficient
+        self.friction_coefficient: float = friction_coefficient
 
     @property
-    def friction_coefficient(self):
+    def friction_coefficient(self) -> float:
+        '''
+        Return the non-negative ground friction coefficient.
+        '''
         return self._friction_coefficient
 
     @friction_coefficient.setter
-    def friction_coefficient(self, value):
-        value = float(value)
-        if not math.isfinite(value) or value < 0:
-            raise ValueError('Friction coefficient must be finite and non-negative')
-        self._friction_coefficient = value
+    def friction_coefficient(self, value: float) -> None:
+        '''
+        Set the uniform ground friction coefficient.
 
-    def get_friction_at(self, x_mm, y_mm):
+        Arg:
+            value (float): Finite non-negative friction coefficient.
+        '''
+        number(value, 'friction_coefficient', minimum=0)
+        self._friction_coefficient: float = value
+
+    def get_friction_at(self, x_mm: float, y_mm: float) -> float:
         '''
         Return ground friction at a wheel contact point.
 
@@ -57,18 +74,42 @@ class World(ABC):
         Returns:
             float: Non-negative friction coefficient.
         '''
+        number(x_mm, 'x_mm')
+        number(y_mm, 'y_mm')
         return self.friction_coefficient
 
     def get_ambient_light(self) -> float:
+        '''
+        Return uniform ambient light from 0 to 100.
+        '''
         return self._ambient_light
 
     def set_ambient_light(self, value: float) -> None:
-        value = float(value)
-        if not math.isfinite(value) or not 0 <= value <= 100:
-            raise ValueError("Ambient light must be finite and between 0 and 100")
-        self._ambient_light = value
+        '''
+        Set the uniform ambient light signal.
 
-    ambient_light = property(get_ambient_light, set_ambient_light)
+        Arg:
+            value (float): Ambient light from 0 to 100.
+        '''
+        number(value, 'ambient_light', minimum=0, maximum=100)
+        self._ambient_light: float = value
+
+    @property
+    def ambient_light(self) -> float:
+        '''
+        Return uniform ambient light from 0 to 100.
+        '''
+        return self.get_ambient_light()
+
+    @ambient_light.setter
+    def ambient_light(self, value: float) -> None:
+        '''
+        Set uniform ambient light.
+
+        Arg:
+            value (float): Ambient light from 0 to 100.
+        '''
+        self.set_ambient_light(value)
 
     def get_ambient_at(self, x_mm: float, y_mm: float, z_mm: float) -> float:
         '''
@@ -82,6 +123,9 @@ class World(ABC):
         Returns:
             float: Ambient light from 0 to 100 in the simulated signal scale.
         '''
+        number(x_mm, 'x_mm')
+        number(y_mm, 'y_mm')
+        number(z_mm, 'z_mm', minimum=0)
         return self.ambient_light
 
     def raycast_surface(self, x_mm: float, y_mm: float, z_mm: float,
@@ -102,6 +146,9 @@ class World(ABC):
         Returns:
             SurfaceHit | None: Nearest surface hit, or None when no surface is seen.
         '''
+        vector((x_mm, y_mm, z_mm), 'origin', 3)
+        unit_vector((dx, dy, dz), 'direction')
+        number(max_mm, 'max_mm', minimum=0)
         hit = None
         if z_mm > 0 and dz < -1e-9:
             distance = -z_mm / dz
@@ -127,6 +174,8 @@ class World(ABC):
         Returns:
             int: Ground reflection from 0 to 100.
         '''
+        number(x_mm, 'x_mm')
+        number(y_mm, 'y_mm')
         return min((line.get_reflection_at(x_mm, y_mm, self.reflection)
                     for line in self.lines), default=self.reflection)
 
@@ -147,6 +196,8 @@ class World(ABC):
         Returns:
             float: Distance in mm, or max_mm when no object is detected.
         '''
+        number(heading_deg, 'heading_deg')
+        number(pitch_deg, 'pitch_deg')
         yaw = math.radians(heading_deg)
         pitch = math.radians(pitch_deg)
         hit = self.raycast_surface(x_mm, y_mm, z_mm,
@@ -171,7 +222,7 @@ class World(ABC):
             raise TypeError("obstacle must be an Obstacle")
         self.obstacles.append(obstacle)
 
-    def save_preview(self, path, trace=()) -> None:
+    def save_preview(self, path: str | Path, trace = ()) -> None:
         '''
         Save the map and optional robot path as an SVG preview.
 
@@ -179,6 +230,9 @@ class World(ABC):
             path (Path): Output image path.
             trace (tuple): Robot poses as x, y and heading in degrees.
         '''
+        sequence(trace, 'trace')
+        trace = tuple(vector(pose, 'trace pose', 3) for pose in trace)
+        path = Path(path)
         xmin, ymin, xmax, ymax = self.bounds
         parts = [f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="{xmin} {-ymax} {xmax-xmin} {ymax-ymin}">',
                  f'<rect x="{xmin}" y="{-ymax}" width="{xmax-xmin}" height="{ymax-ymin}" fill="white"/>']

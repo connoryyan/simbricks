@@ -2,14 +2,15 @@ import math
 from abc import ABC, abstractmethod
 
 from .surface import SurfaceHit
+from sim.validation import number, unit_vector, vector
 
 
 class Obstacle(ABC):
     '''
-    Define an obstacle surface and its preview.
+    Define ray intersections and a preview for an obstacle shape.
     '''
     @abstractmethod
-    def raycast(self, origin, direction, max_mm) -> SurfaceHit | None:
+    def raycast(self, origin, direction, max_mm: float) -> SurfaceHit | None:
         '''
         Return the nearest surface hit along a unit ray.
 
@@ -33,10 +34,18 @@ class Obstacle(ABC):
 
 class BoxObstacle(Obstacle):
     '''
-    Store an obstacle box in mm.
+    Represent an axis-aligned box standing on the ground.
+
+    Attributes:
+        xmin (float): Minimum world x coordinate in mm.
+        ymin (float): Minimum world y coordinate in mm.
+        xmax (float): Maximum world x coordinate in mm.
+        ymax (float): Maximum world y coordinate in mm.
+        height_mm (float): Box height above the ground in mm.
+        reflection (float): Reflection from 0 to 100.
     '''
     def __init__(self, xmin: float, ymin: float, xmax: float, ymax: float,
-                 height_mm: float, reflection: int = 40):
+                 height_mm: float, reflection: int = 40) -> None:
         '''
         Create an obstacle box.
 
@@ -48,21 +57,22 @@ class BoxObstacle(Obstacle):
             height_mm (float): Height above the ground in mm.
             reflection (int): Surface reflection from 0 to 100.
         '''
-        if (not all(math.isfinite(v) for v in (xmin, ymin, xmax, ymax, height_mm))
-                or xmin >= xmax or ymin >= ymax or height_mm <= 0):
+        for name, value in zip(('xmin', 'ymin', 'xmax', 'ymax', 'height_mm'),
+                               (xmin, ymin, xmax, ymax, height_mm)):
+            number(value, name)
+        if xmin >= xmax or ymin >= ymax or height_mm <= 0:
             raise ValueError("Box dimensions must form a finite positive volume")
-        if not math.isfinite(reflection) or not 0 <= reflection <= 100:
-            raise ValueError("Obstacle reflection must be between 0 and 100")
-        self.xmin = xmin
-        self.ymin = ymin
-        self.xmax = xmax
-        self.ymax = ymax
-        self.height_mm = height_mm
-        self.reflection = reflection
+        number(reflection, 'reflection', minimum=0, maximum=100)
+        self.xmin: float = xmin
+        self.ymin: float = ymin
+        self.xmax: float = xmax
+        self.ymax: float = ymax
+        self.height_mm: float = height_mm
+        self.reflection: float = reflection
 
-    def raycast(self, origin, direction, max_mm) -> SurfaceHit | None:
+    def raycast(self, origin, direction, max_mm: float) -> SurfaceHit | None:
         '''
-        Find the first box surface along a unit ray.
+        Use Slab Algorithm to find where the ray first hits a box.
 
         Arg:
             origin (tuple): Ray origin in mm.
@@ -72,6 +82,9 @@ class BoxObstacle(Obstacle):
         Returns:
             SurfaceHit | None: First surface hit, or None.
         '''
+        origin = vector(origin, 'origin', 3)
+        direction = unit_vector(direction, 'direction')
+        number(max_mm, 'max_mm', minimum=0)
         entry, exit = -math.inf, math.inf
         entry_cosine = exit_cosine = 0.0
         for o, d, lo, hi in zip(origin, direction,

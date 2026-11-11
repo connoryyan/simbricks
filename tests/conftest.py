@@ -2,6 +2,11 @@ import pytest
 
 import sim
 import world
+from maps.flat_white.world import FlatWhiteWorld
+from pybricks.hubs import PrimeHub
+from pybricks.parameters import Direction, Port
+from pybricks.pupdevices import Motor
+from pybricks.robotics import DriveBase
 from sim.clock import clock
 
 
@@ -18,12 +23,14 @@ def clean_simulation():
     clock.time_ms = 0
     clock._initialization = None
     world.current_world = None
-    yield
-    clock._steppables.clear()
-    clock._steppables.update(previous_groups)
-    clock.time_ms = previous_time
-    clock._initialization = previous_initialization
-    world.current_world = previous_world
+    try:
+        yield
+    finally:
+        clock._steppables.clear()
+        clock._steppables.update(previous_groups)
+        clock.time_ms = previous_time
+        clock._initialization = previous_initialization
+        world.current_world = previous_world
 
 
 @pytest.fixture
@@ -32,3 +39,33 @@ def initialized():
         pass
 
     sim.initialize(init)
+
+
+@pytest.fixture
+def robot(initialized):
+    left = Motor(Port.B, Direction.COUNTERCLOCKWISE)
+    right = Motor(Port.D)
+    return DriveBase(left, right, 56, 112)
+
+
+@pytest.fixture
+def hub_robot(initialized):
+    hub = PrimeHub()
+    left = Motor(Port.B, Direction.COUNTERCLOCKWISE)
+    right = Motor(Port.D)
+    robot = DriveBase(left, right, 56, 112)
+    return hub, robot
+
+
+@pytest.fixture
+def flat_field():
+    field = FlatWhiteWorld()
+    world.current_world = field
+    return field
+
+
+@pytest.fixture
+def white_field():
+    field = FlatWhiteWorld(ambient_light=0)
+    world.current_world = field
+    return field

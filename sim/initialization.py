@@ -3,13 +3,16 @@ from .clock import clock
 
 class NotInitializedError(RuntimeError):
     '''
-    Report a missing or failed program initializer.
+    Report a missing or failed simulation initializer.
+
+    Attributes:
+        args (tuple): Exception arguments containing the error message.
     '''
 
     def __init__(self, 
-                 message='Simulation is not initialized. '
+                 message = 'Simulation is not initialized. '
                          'Define init() and call sim.initialize(init) '
-                         'or sim.run(init, main) before using robot APIs.'):
+                         'or sim.run(init, main) before using robot APIs.') -> None:
         super().__init__(message)
 
 
@@ -31,7 +34,7 @@ def requires_init(function):
     return checked
 
 
-def initialize(init=None, *args, **kwargs):
+def initialize(init = None, *args, **kwargs):
     '''
     Call the program initializer without imposing any device configuration.
 
@@ -50,6 +53,7 @@ def initialize(init=None, *args, **kwargs):
     clock._initialization = 'initializing'
     try:
         result = init(*args, **kwargs)
+    # If any exception happens, clear the init status and then raise error
     except BaseException:
         clock._initialization = None
         raise
@@ -57,7 +61,7 @@ def initialize(init=None, *args, **kwargs):
     return result
 
 
-def run(init=None, main=None):
+def run(init = None, main = None) -> None:
     '''
     Run the program initializer before its main function.
 

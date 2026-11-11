@@ -1,46 +1,106 @@
 import math
 import shutil
 import subprocess
+from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from pybricks.pupdevices.sensor import Sensor
+    from pybricks.robotics import DriveBase
+
+RobotPose = tuple[float, float, float]
+SensorPose = tuple[float, float, float, float, float, float]
+Frame = tuple[float, RobotPose, tuple[SensorPose, ...]]
+
+from sim.clock import SimClock
+from sim.validation import number, sequence, vector
+from world import World, Polyline, BoxObstacle
+
+
+def _validate_frame(frame) -> None:
+    '''
+    Check a recorded time, robot pose and sensor poses.
+    '''
+    sequence(frame, 'frame', 3)
+    time_s, pose, sensors = frame
+    number(time_s, 'frame time', minimum=0)
+    vector(pose, 'robot pose', 3)
+    sequence(sensors, 'sensor poses')
+    for pose in sensors:
+        vector(pose, 'sensor pose', 6)
+        number(pose[2], 'sensor height', minimum=0)
 
 
 class PoseRecorder:
     '''
-    Record poses at 30 frames per simulated second without sampling sensors.
-    '''
-    step_priority = 3
+    Record true robot and sensor poses at 30 simulated frames per second.
 
-    def __init__(self, robot, sensors, frames, clock):
-        self.robot = robot
-        self.sensors = sensors
-        self.frames = frames
-        self.clock = clock
-        self.start_ms = clock.time_ms
-        self.next_frame = 0
+    Attributes:
+        step_priority (int): Clock update phase; smaller phases run first.
+        robot (DriveBase): Robot supplying a three-component pose.
+        sensors (list | tuple): Objects supplying six-component sensor poses.
+        frames (list): Output list of (time_s, robot_pose, sensor_poses) records.
+        clock (SimClock): Simulation clock used for recording timestamps.
+        start_ms (float): Simulation time when recording started, in ms.
+        next_frame (int): Index of the next 30 FPS frame to record.
+    '''
+    step_priority: int = 3
+
+    def __init__(self, robot: 'DriveBase', sensors: 'list[Sensor] | tuple[Sensor, ...]', frames: list[Frame], clock: SimClock) -> None:
+        '''
+        Start pose recording and capture the initial state immediately.
+
+        Arg:
+            robot (DriveBase): Robot with a three-component pose() method.
+            sensors (list | tuple): Sensors with six-component pose() methods.
+            frames (list): Mutable list receiving time, robot pose and sensor poses.
+            clock (SimClock): Clock supplying simulation time.
+        '''
+        if not callable(getattr(robot, 'pose', None)):
+            raise TypeError('robot must have a pose() method')
+        sequence(sensors, 'sensors')
+        if not all(callable(getattr(sensor, 'pose', None)) for sensor in sensors):
+            raise TypeError('Each sensor must have a pose() method')
+        if not isinstance(frames, list):
+            raise TypeError('frames must be a list')
+        if not isinstance(clock, SimClock):
+            raise TypeError('clock must be a SimClock')
+        self.robot: DriveBase = robot
+        self.sensors: list[Sensor] | tuple[Sensor, ...] = sensors
+        self.frames: list[Frame] = frames
+        self.clock: SimClock = clock
+        self.start_ms: float = clock.time_ms
+        self.next_frame: int = 0
         self.capture()
 
-    def capture(self):
+    def capture(self) -> None:
         '''
         Store the current robot and sensor poses.
         '''
-        self.frames.append((
+        frame = (
             (self.clock.time_ms - self.start_ms) / 1000,
             self.robot.pose(), tuple(sensor.pose() for sensor in self.sensors),
-        ))
+        )
+        _validate_frame(frame)
+        self.frames.append(frame)
         self.next_frame += 1
 
-    def step(self, dt_s):
+    def step(self, dt_s: float) -> None:
         '''
         Record the state at the end of the current simulation step.
         '''
+        number(dt_s, 'dt_s', positive=True)
         # The clock publishes its new time after all steppables have run.
         elapsed = self.clock.time_ms - self.start_ms + dt_s * 1000
         if elapsed + 1e-9 >= self.next_frame * 1000 / 30:
-            self.frames.append((elapsed / 1000, self.robot.pose(),
-                                tuple(sensor.pose() for sensor in self.sensors)))
+            frame = (elapsed / 1000, self.robot.pose(),
+                     tuple(sensor.pose() for sensor in self.sensors))
+            _validate_frame(frame)
+            self.frames.append(frame)
             self.next_frame += 1
 
 
-def save_video(path, field, frames, fps=30):
+def save_video(path: str | Path, field, frames: list[Frame], fps: int = 30) -> None:
     '''
     Save a top view of the recorded simulation as an H.264 MP4 video.
 
@@ -50,15 +110,32 @@ def save_video(path, field, frames, fps=30):
         frames (list): Recorded times, robot poses and sensor poses.
         fps (int): Video frames per second. Use 30 for PoseRecorder output.
     '''
+    path = Path(path)
+    if not isinstance(field, World):
+        raise TypeError('field must be a World')
+    if not all(isinstance(line, Polyline) for line in field.lines):
+        raise TypeError('Video export requires Polyline lines')
+    if not all(isinstance(box, BoxObstacle) for box in field.obstacles):
+        raise TypeError('Video export requires BoxObstacle obstacles')
+    sequence(frames, 'frames')
+    if not frames:
+        raise ValueError('No recorded frames')
+    if isinstance(fps, bool) or not isinstance(fps, int):
+        raise TypeError('fps must be an int')
+    if fps != 30:
+        raise ValueError('PoseRecorder records at 30 FPS')
+    previous = -math.inf
+    for frame in frames:
+        _validate_frame(frame)
+        if frame[0] < previous:
+            raise ValueError('Frame times must be non-decreasing')
+        previous = frame[0]
+
     from PIL import Image, ImageDraw
 
     executable = shutil.which('ffmpeg')
     if executable is None:
         raise RuntimeError('Install FFmpeg and add it to PATH to export MP4')
-    if not frames:
-        raise ValueError('No recorded frames')
-    if fps != 30:
-        raise ValueError('PoseRecorder records at 30 FPS')
 
     width, height = 1280, 480
     xmin, ymin, xmax, ymax = field.bounds
@@ -81,7 +158,7 @@ def save_video(path, field, frames, fps=30):
         draw.rectangle([point(box.xmin, box.ymax), point(box.xmax, box.ymin)],
                        fill='#e57235', outline='#a74715')
         draw.text(point(box.xmin, box.ymax+35), f'{box.height_mm:g} mm high', fill='#a74715')
-    draw.text((30, 42), 'Black: 20 mm line   Blue: robot path   Green: colour sensor   Red: ultrasound',
+    draw.text((30, 42), 'Grey/black: map lines   Blue: robot path   Green: sensor   Red: range ray',
               fill='#394957')
 
     command = [executable, '-y', '-v', 'error', '-f', 'rawvideo', '-pix_fmt', 'rgb24',

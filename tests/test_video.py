@@ -2,15 +2,113 @@ import io
 
 import pytest
 
+from maps.flat_white.world import FlatWhiteWorld
 from maps.line_follow.world import LineFollowWorld
 from render import video
+from render.video import PoseRecorder, save_video
+from sim.clock import clock
+from world import Line, Obstacle
+
+
+def test_recorder_argument_validation(robot):
+    frames = []
+    for args in (
+        (None, (), frames, clock),
+        (robot, [None], frames, clock),
+        (robot, (), (), clock),
+        (robot, (), frames, None),
+    ):
+        with pytest.raises(TypeError):
+            PoseRecorder(*args)
+    assert frames == []
+    recorder = PoseRecorder(robot, (), frames, clock)
+    with pytest.raises(ValueError):
+        recorder.step(0)
+    assert len(frames) == 1
+
+
+def test_video_rejects_bad_arguments_before_encoding(monkeypatch):
+    import render.video as video
+
+    def start(*args, **kwargs):
+        pytest.fail('Invalid input must not start an encoder')
+    monkeypatch.setattr(video.subprocess, 'Popen', start)
+    field = FlatWhiteWorld()
+    valid = [(0, (0, 0, 0), ())]
+    for operation in (
+        lambda: save_video(None, field, valid),
+        lambda: save_video('ignored.mp4', None, valid),
+        lambda: save_video('ignored.mp4', field, None),
+        lambda: save_video('ignored.mp4', field, valid, fps=True),
+        lambda: save_video('ignored.mp4', field, valid, fps=30.0),
+        lambda: save_video('ignored.mp4', field, [(0, (0, 0, 0), None)]),
+        lambda: save_video('ignored.mp4', field, [('0', (0, 0, 0), ())]),
+    ):
+        with pytest.raises(TypeError):
+            operation()
+    for frames in (
+        [(0, (0, 0), ())],
+        [(0, (0, 0, 0))],
+        [(-1, (0, 0, 0), ())],
+        [(0, (0, 0, 0), [(0, 0, -1, 0, 0, 0)])],
+        [(1, (0, 0, 0), ()), (0, (0, 0, 0), ())],
+    ):
+        with pytest.raises(ValueError):
+            save_video('ignored.mp4', field, frames)
+
+
+def test_video_rejects_unsupported_geometry():
+
+    class CustomLine(Line):
+
+        '''
+        Provide a non-polyline line for video format validation tests.
+
+        Attributes:
+            width_mm (float): Total line width in mm.
+            reflection (float): Reflection from 0 to 100.
+            edge_width_mm (float): Width of the reflection blend at the line edge, in mm.
+        '''
+        def distance_to(self, x, y):
+            return 0
+
+        def to_svg(self):
+            return ''
+
+    class CustomObstacle(Obstacle):
+
+        '''
+        Provide a non-box obstacle for video format validation tests.
+        '''
+        def raycast(self, origin, direction, max_mm):
+            return None
+
+        def to_svg(self):
+            return ''
+    field = FlatWhiteWorld()
+    field.add_line(CustomLine())
+    with pytest.raises(TypeError, match='Polyline'):
+        save_video('ignored.mp4', field, [(0, (0, 0, 0), ())])
+    field.lines.clear()
+    field.add_obstacle(CustomObstacle())
+    with pytest.raises(TypeError, match='BoxObstacle'):
+        save_video('ignored.mp4', field, [(0, (0, 0, 0), ())])
 
 
 class InputStream:
+
+    '''
+    Count frame writes in encoder tests.
+
+    Attributes:
+        fail (bool): Whether writes raise a simulated broken-pipe error.
+        frames (int): Number of complete video frames written.
+        closed (bool): Whether close() has been called.
+    '''
     def __init__(self, fail=False):
-        self.fail = fail
-        self.frames = 0
-        self.closed = False
+        self.fail: bool = fail
+        self.frames: int = 0
+        self.closed: bool = False
 
     def write(self, data):
         if self.fail:
@@ -23,12 +121,23 @@ class InputStream:
 
 
 class Encoder:
+
+    '''
+    Provide a fake FFmpeg process for video export tests.
+
+    Attributes:
+        returncode (int): Exit code returned by wait().
+        stdin (InputStream): Fake input stream receiving rendered video frames.
+        stderr (BytesIO): Byte stream containing a simulated encoder error.
+        finished (bool): Whether wait() has marked the fake process as finished.
+        killed (bool): Whether kill() has been called.
+    '''
     def __init__(self, returncode=0, fail=False):
-        self.returncode = returncode
-        self.stdin = InputStream(fail)
-        self.stderr = io.BytesIO(b'encoder error')
-        self.finished = False
-        self.killed = False
+        self.returncode: int = returncode
+        self.stdin: InputStream = InputStream(fail)
+        self.stderr: io.BytesIO = io.BytesIO(b'encoder error')
+        self.finished: bool = False
+        self.killed: bool = False
 
     def wait(self):
         self.finished = True
@@ -48,7 +157,6 @@ def test_video_draws_frames_and_holds_final_frame(monkeypatch, tmp_path):
     def start(command, **kwargs):
         commands.append(command)
         return encoder
-
     monkeypatch.setattr(video.shutil, 'which', lambda name: 'ffmpeg')
     monkeypatch.setattr(video.subprocess, 'Popen', start)
     frames = [
@@ -72,7 +180,7 @@ def test_video_rejects_missing_encoder_frames_and_wrong_fps(monkeypatch, tmp_pat
     path = tmp_path / 'video.mp4'
     monkeypatch.setattr(video.shutil, 'which', lambda name: None)
     with pytest.raises(RuntimeError, match='FFmpeg'):
-        video.save_video(path, field, [])
+        video.save_video(path, field, [(0, (0, 0, 0), ())])
     monkeypatch.setattr(video.shutil, 'which', lambda name: 'ffmpeg')
     with pytest.raises(ValueError, match='No recorded'):
         video.save_video(path, field, [])

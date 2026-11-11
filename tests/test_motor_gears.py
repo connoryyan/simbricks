@@ -2,10 +2,26 @@ import pytest
 
 from pybricks.parameters import Direction, Port, Stop
 from pybricks.pupdevices import Motor
-from pybricks.pupdevices.actuator import _effective_gear_ratio
+from pybricks.pupdevices.actuator import _effective_gear_ratio, _is_int
 from pybricks.robotics import DriveBase
 from pybricks.tools import wait
 from sim.clock import clock
+
+
+def test_gear_ratio():
+    assert _is_int(3)
+    assert not _is_int(True)
+    assert not _is_int(3.0)
+    assert _effective_gear_ratio(None) == 1
+    with pytest.raises(TypeError):
+        _effective_gear_ratio('invalid')
+    assert _effective_gear_ratio([12, 36]) == 3
+    assert _effective_gear_ratio([[12, 36], [20, 40]]) == 6
+    with pytest.raises(ZeroDivisionError):
+        _effective_gear_ratio([0, 36])
+    with pytest.raises(TypeError):
+        _effective_gear_ratio([12.0, 36])
+    assert _effective_gear_ratio([12]) == 1
 
 
 def test_gear_trains_and_idlers():
@@ -31,8 +47,7 @@ def test_invalid_gears_do_not_register_a_motor():
     assert clock.steppables == ()
 
 
-@pytest.mark.parametrize('direction', [Direction.CLOCKWISE, Direction.COUNTERCLOCKWISE])
-def test_geared_angle_speed_and_hold(direction, initialized):
+def _check_geared_angle_speed_and_hold(direction):
     motor = Motor(Port.A, direction, gears=[12, 36])
     sign = direction.value
     motor.run(100)
@@ -64,10 +79,17 @@ def test_geared_angle_speed_and_hold(direction, initialized):
     assert motor.angle() == pytest.approx(held, abs=0.1)
 
 
-@pytest.mark.parametrize('gears, ratio', [([12, 36], 3), ([36, 12], 1 / 3)])
-def test_gears_scale_output_limit_but_not_duty(gears, ratio, initialized):
+def test_clockwise_geared_angle_speed_and_hold(initialized):
+    _check_geared_angle_speed_and_hold(Direction.CLOCKWISE)
+
+
+def test_counterclockwise_geared_angle_speed_and_hold(initialized):
+    _check_geared_angle_speed_and_hold(Direction.COUNTERCLOCKWISE)
+
+
+def _check_gears_scale_output_limit_but_not_duty(gears, ratio):
     motor = Motor(Port.A, gears=gears)
-    motor.run(10_000)
+    motor.run(10000)
     wait(2000)
     assert motor.model.speed == pytest.approx(1500, abs=0.01)
     assert motor.speed() == pytest.approx(1500 / ratio, abs=0.01)
@@ -78,6 +100,14 @@ def test_gears_scale_output_limit_but_not_duty(gears, ratio, initialized):
     motor.dc(-50)
     wait(2000)
     assert motor.speed() == pytest.approx(-750 / ratio, abs=0.01)
+
+
+def test_reduction_scales_output_limit_but_not_duty(initialized):
+    _check_gears_scale_output_limit_but_not_duty([12, 36], 3)
+
+
+def test_speed_increase_scales_output_limit_but_not_duty(initialized):
+    _check_gears_scale_output_limit_but_not_duty([36, 12], 1 / 3)
 
 
 def test_compound_gears_run_angle_and_brake(initialized):
@@ -104,8 +134,7 @@ def test_drivebase_with_different_wheel_gearing(initialized):
     assert robot.pose()[2] == pytest.approx(-90, abs=2)
 
 
-@pytest.mark.parametrize('friction', [False, True])
-def test_geared_drivebase_matches_direct_drive(friction, initialized):
+def _check_geared_drivebase_matches_direct_drive(friction):
     geared = DriveBase(Motor(Port.A, gears=[12, 36]), Motor(Port.B, gears=[12, 24]), 56, 112)
     direct = DriveBase(Motor(Port.C), Motor(Port.D), 56, 112)
     geared.model.configure_friction(enabled=friction)
@@ -113,12 +142,20 @@ def test_geared_drivebase_matches_direct_drive(friction, initialized):
     geared.drive(100, 30)
     direct.drive(100, 30)
     wait(1000)
-    assert geared.pose() == pytest.approx(direct.pose(), abs=1e-8)
-    assert geared.state() == pytest.approx(direct.state(), abs=1e-8)
+    assert geared.pose() == pytest.approx(direct.pose(), abs=1e-08)
+    assert geared.state() == pytest.approx(direct.state(), abs=1e-08)
     geared.brake()
     direct.brake()
     wait(1000)
-    assert geared.pose() == pytest.approx(direct.pose(), abs=1e-8)
+    assert geared.pose() == pytest.approx(direct.pose(), abs=1e-08)
+
+
+def test_geared_drivebase_matches_direct_drive(initialized):
+    _check_geared_drivebase_matches_direct_drive(False)
+
+
+def test_geared_drivebase_matches_direct_drive_with_friction(initialized):
+    _check_geared_drivebase_matches_direct_drive(True)
 
 
 def test_existing_geared_rotation_is_not_counted_as_new_motion(initialized):
