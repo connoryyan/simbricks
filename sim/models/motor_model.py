@@ -84,6 +84,20 @@ class MotorModel(Model):
 
     speed = property(get_speed)
 
+    @property
+    def output_angle(self) -> float:
+        '''
+        Return the gear output angle in degrees.
+        '''
+        return self.angle / self.gear_ratio
+
+    @property
+    def output_speed(self) -> float:
+        '''
+        Return the gear output speed in deg/s.
+        '''
+        return self.speed / self.gear_ratio
+
     def is_stalled(self, speed_threshold_dps: float = 1.0) -> bool:
         return abs(self._target_speed_dps) > speed_threshold_dps and abs(self._speed_dps) < speed_threshold_dps
 
@@ -92,5 +106,3 @@ class MotorModel(Model):
         self._hold_angle_deg = (
             self._angle_deg if angle_deg is None else float(angle_deg)
         )
-
-    

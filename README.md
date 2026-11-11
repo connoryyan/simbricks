@@ -37,6 +37,9 @@ Optional finite wheel friction separates encoder odometry from actual body motio
 Run `python -B examples/friction_test.py` for wheelspin and braking slip. See
 [docs/friction.md](docs/friction.md) for configuration and model limits.
 
+Motors accept `gears=[12, 36]` or multiple gear trains. Angles and speeds use
+the output shaft, including DriveBase odometry. See [docs/gears.md](docs/gears.md).
+
 Install the test dependencies and run the tests from the repository root:
 
 ```powershell

@@ -14,11 +14,14 @@ def test_gear_ratio():
     assert not _is_int(True)
     assert not _is_int(3.0)
     assert _effective_gear_ratio(None) == 1
-    assert _effective_gear_ratio('invalid') == 1
+    with pytest.raises(TypeError):
+        _effective_gear_ratio('invalid')
     assert _effective_gear_ratio([12, 36]) == 3
     assert _effective_gear_ratio([[12, 36], [20, 40]]) == 6
-    assert _effective_gear_ratio([0, 36]) == 1
-    assert _effective_gear_ratio([12.0, 36]) == 1
+    with pytest.raises(ZeroDivisionError):
+        _effective_gear_ratio([0, 36])
+    with pytest.raises(TypeError):
+        _effective_gear_ratio([12.0, 36])
     assert _effective_gear_ratio([12]) == 1
 
 

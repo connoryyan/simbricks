@@ -40,7 +40,7 @@ class DriveBaseModel(Model):
 
         self._left: MotorModel = left_model
         self._right: MotorModel = right_model
-        # Map raw motor rotation into each wheel's forward direction.
+        # Map gear output rotation into each wheel's forward direction.
         self._left_sign = left_sign
         self._right_sign = right_sign
         # wheel rim travel per wheel degree
@@ -58,8 +58,8 @@ class DriveBaseModel(Model):
         self.distance_mm = 0.0
         self.angle_deg = 0.0       # clockwise positive
 
-        self._last_l: float = left_model.angle * left_sign
-        self._last_r: float = right_model.angle * right_sign
+        self._last_l: float = left_model.output_angle * left_sign
+        self._last_r: float = right_model.output_angle * right_sign
         self._mounts: dict[SensorModel, dict[str, float]] = {}
         self._imu = None
         self.friction_enabled = False
@@ -126,8 +126,8 @@ class DriveBaseModel(Model):
         self._update_mounts()
 
     def _update_odometry(self) -> tuple[float, float]:
-        l = self._left.angle * self._left_sign
-        r = self._right.angle * self._right_sign
+        l = self._left.output_angle * self._left_sign
+        r = self._right.output_angle * self._right_sign
         dl = (l - self._last_l) * self.mm_per_deg
         dr = (r - self._last_r) * self.mm_per_deg
         self._last_l, self._last_r = l, r
@@ -146,8 +146,8 @@ class DriveBaseModel(Model):
         import world
         field = world.get_current_world()
         half_track = self.axle_track/2000
-        wheel_speeds = (self._left.speed*self._left_sign*self.mm_per_deg/1000,
-                        self._right.speed*self._right_sign*self.mm_per_deg/1000)
+        wheel_speeds = (self._left.output_speed*self._left_sign*self.mm_per_deg/1000,
+                        self._right.output_speed*self._right_sign*self.mm_per_deg/1000)
         # Small steps keep the compliant contact response stable, including light
         # bodies and small yaw inertias. At most 1 ms per contact integration.
         stable_dt = min(0.001, self._mass_kg/(8*self._contact_stiffness),
@@ -209,8 +209,8 @@ class DriveBaseModel(Model):
         '''
         Return forward speed estimated from wheel encoders in mm/s.
         '''
-        vl = self._left.speed * self._left_sign * self.mm_per_deg
-        vr = self._right.speed * self._right_sign * self.mm_per_deg
+        vl = self._left.output_speed * self._left_sign * self.mm_per_deg
+        vr = self._right.output_speed * self._right_sign * self.mm_per_deg
         return (vl + vr) / 2.0
 
     def turn_rate_dps(self) -> float:
@@ -228,8 +228,8 @@ class DriveBaseModel(Model):
         '''
         Return clockwise turn rate estimated from wheel encoders in deg/s.
         '''
-        vl = self._left.speed * self._left_sign * self.mm_per_deg
-        vr = self._right.speed * self._right_sign * self.mm_per_deg
+        vl = self._left.output_speed * self._left_sign * self.mm_per_deg
+        vr = self._right.output_speed * self._right_sign * self.mm_per_deg
         return math.degrees((vl - vr) / self.axle_track)
 
     def velocity_mm_s(self):

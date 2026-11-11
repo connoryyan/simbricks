@@ -13,39 +13,38 @@ def _is_int(num):
     return isinstance(num, int) and not isinstance(num, bool)
 
 
-def _effective_gear_ratio(gears: list[int] | list[list[int]]) -> float:
+def _effective_gear_ratio(gears) -> float:
     '''
     Calculate the gear ratio of a gear chain.
 
     Arg:
-        gears (list[int] | list[list[int]]): Gear teeth in one or more chains.
+        gears (list | tuple | None): Gear teeth in one or more chains.
 
     Returns:
-        float: Output gear teeth divided by input gear teeth across all chains.
+        float: Output gear teeth divided by input gear teeth across 
+               all chains.
     '''
-    if gears is None or not isinstance(gears, list):
+    if gears is None:
         return 1.0
-
-    def chain_ratio(chain: list[int]) -> float:
-        ratio = 1.0
-
-        for i in range(len(chain) - 1):
-            gear = chain[i]
-            if not _is_int(gear) or gear == 0.0:
-                return 1.0
-
-            ratio *= chain[i + 1] / chain[i]
-
-        return ratio
-
-    first = gears[0]
-    if isinstance(first, list):
-        total = 1.0
-        for chain in gears:
-            total *= chain_ratio(chain)
-        return total
-
-    return chain_ratio(gears)
+    if not isinstance(gears, (list, tuple)):
+        raise TypeError('gears must be a list or tuple')
+    if not gears:
+        raise ValueError('gears cannot be empty')
+    trains = gears if isinstance(gears[0], (list, tuple)) else (gears,)
+    first_product = last_product = 1
+    for train in trains:
+        if not isinstance(train, (list, tuple)):
+            raise TypeError('Each gear train must be a list or tuple')
+        if not train:
+            raise ValueError('Gear trains cannot be empty')
+        for gear in train:
+            if not _is_int(gear):
+                raise TypeError('Gear teeth must be integers')
+            if gear <= 0:
+                raise ZeroDivisionError('Gears must be positive integers')
+        first_product *= train[0]
+        last_product *= train[-1]
+    return last_product / first_product
 
 
 class Actuator(Device):
@@ -73,10 +72,12 @@ class DCMotor(Actuator):
     Represent a motor without angle feedback.
     '''
 
-    def __init__(self, port: Port, positive_direction: Direction = Direction.CLOCKWISE):
+    def __init__(self, port: Port, 
+                 positive_direction: Direction = Direction.CLOCKWISE):
         super().__init__(port, positive_direction)
 
     @requires_init
+    # Raise NotInitializedError if run this before running init() function.
     def dc(self, duty: float) -> None:
         '''
         Run the motor at a duty cycle.
@@ -97,9 +98,20 @@ class Motor(DCMotor):
     Represent a motor with angle feedback.
     '''
 
-    def __init__(self, port: Port, 
-                 positive_direction: Direction = Direction.CLOCKWISE):
+    def __init__(self, port: Port,
+                 positive_direction: Direction = Direction.CLOCKWISE,
+                 gears=None):
+        '''
+        Create a motor with angles and speeds at the gear output.
+
+        Arg:
+            port (Port): Port the motor is plugged into.
+            positive_direction (Direction): Positive motor direction.
+            gears (list | tuple | None): Gear teeth from motor to output.
+        '''
+        gear_ratio = _effective_gear_ratio(gears)
         super().__init__(port, positive_direction)
+        self._model.gear_ratio = gear_ratio
 
         self._angle_offset = 0.0
         self._action = None
@@ -120,7 +132,7 @@ class Motor(DCMotor):
     def run(self, speed: float):
         if not math.isfinite(speed):
             raise ValueError("speed must be finite")
-        self._model.run(self._direction.value * speed)
+        self._model.run(self._direction.value * speed * self._model.gear_ratio)
 
     @requires_init
     def run_time(self, speed: float, time: float, 
@@ -186,14 +198,14 @@ class Motor(DCMotor):
             raw_target = (
                 None
                 if target_physical is None
-                else self._direction.value * target_physical
+                else self._direction.value * target_physical * self._model.gear_ratio
             )
             self._model.hold(raw_target)
         else:
             raise ValueError("Unsupported stop mode")
 
     def _physical_angle(self) -> float:
-        return self._direction.value * self._model.get_angle()
+        return self._direction.value * self._model.output_angle
 
     @requires_init
     def angle(self):
@@ -201,7 +213,7 @@ class Motor(DCMotor):
 
     @requires_init
     def speed(self):
-        return self._direction.value * self._model.get_speed()
+        return self._direction.value * self._model.output_speed
 
     def reset_angle(self, angle: float = 0.0) -> None:
         self._angle_offset = self._physical_angle() - float(angle)
