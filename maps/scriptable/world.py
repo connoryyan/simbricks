@@ -12,8 +12,10 @@ class ScriptableWorld(World):
         bounds (tuple): Preview rectangle (xmin, ymin, xmax, ymax) in world mm.
         lines (list): Ground lines contributing to reflection readings.
         obstacles (list): Obstacle shapes tested by surface rays.
-        friction_coefficient (float): Uniform non-negative ground friction coefficient.
-        _friction_coefficient (float): Stored coefficient backing friction_coefficient.
+        friction_coefficient (float): Uniform non-negative ground friction
+            coefficient.
+        _friction_coefficient (float): Stored coefficient backing
+            friction_coefficient.
         _ambient_light (float): Stored ambient signal backing ambient_light.
         _reflection (float): Scripted ground reflection from 0 to 100.
         _distance (float): Scripted non-negative ultrasonic range in mm.
@@ -65,10 +67,18 @@ class ScriptableWorld(World):
         number(y_mm, 'y_mm')
         return self._reflection
 
-    def raycast_distance(self, x_mm: float, y_mm: float, heading_deg: float,
-                         max_mm: float = 2000, *, z_mm: float = 0.0,
-                         pitch_deg: float = 0.0) -> float:
-        # This test world deliberately returns a scripted range without geometry.
+    def raycast_distance(
+        self,
+        x_mm: float,
+        y_mm: float,
+        heading_deg: float,
+        max_mm: float = 2000,
+        *,
+        z_mm: float = 0.0,
+        pitch_deg: float = 0.0,
+    ) -> float:
+        # This test world deliberately returns a scripted range without
+        # geometry.
         '''
         Return the scripted distance capped by the requested range.
 
@@ -91,5 +101,3 @@ class ScriptableWorld(World):
         number(z_mm, 'z_mm', minimum=0)
         number(max_mm, 'max_mm', minimum=0)
         return min(self._distance, max_mm)
-
-

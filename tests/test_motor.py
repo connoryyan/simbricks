@@ -161,7 +161,8 @@ def test_motor_arguments_preserve_running_state(initialized):
             lambda: motor.run_angle(100, bad),
             lambda: motor.reset_angle(bad),
             lambda: motor.model.run(bad),
-            lambda: motor.model.hold(bad) if bad is not None else motor.model.step(bad),
+            lambda: motor.model.hold(
+                bad) if bad is not None else motor.model.step(bad),
             lambda: motor.model.step(bad),
             lambda: motor.model.is_stalled(bad),
             lambda: setattr(motor.model, 'gear_ratio', bad),

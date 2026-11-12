@@ -15,7 +15,8 @@ def clean_simulation():
     '''
     Keep global simulation state separate for each test.
     '''
-    previous_groups = {priority: group.copy() for priority, group in clock._steppables.items()}
+    previous_groups = {priority: group.copy()
+                       for priority, group in clock._steppables.items()}
     previous_time = clock.time_ms
     previous_initialization = clock._initialization
     previous_world = world.current_world

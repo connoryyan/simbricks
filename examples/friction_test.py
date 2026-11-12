@@ -43,7 +43,7 @@ def main():
     print(f'True body speed: {robot.model.speed_mm_s():.1f} mm/s')
     before = robot.pose()[0]
     wait(2000)
-    print(f'Additional sliding distance: {robot.pose()[0]-before:.1f} mm')
+    print(f'Additional sliding distance: {robot.pose()[0] - before:.1f} mm')
     print(f'Final body speed: {robot.model.speed_mm_s():.3f} mm/s')
 
 

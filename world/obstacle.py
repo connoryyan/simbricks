@@ -44,8 +44,16 @@ class BoxObstacle(Obstacle):
         height_mm (float): Box height above the ground in mm.
         reflection (float): Reflection from 0 to 100.
     '''
-    def __init__(self, xmin: float, ymin: float, xmax: float, ymax: float,
-                 height_mm: float, reflection: int = 40) -> None:
+
+    def __init__(
+        self,
+        xmin: float,
+        ymin: float,
+        xmax: float,
+        ymax: float,
+        height_mm: float,
+        reflection: int = 40,
+    ) -> None:
         '''
         Create an obstacle box.
 
@@ -61,7 +69,8 @@ class BoxObstacle(Obstacle):
                                (xmin, ymin, xmax, ymax, height_mm)):
             number(value, name)
         if xmin >= xmax or ymin >= ymax or height_mm <= 0:
-            raise ValueError("Box dimensions must form a finite positive volume")
+            raise ValueError(
+                "Box dimensions must form a finite positive volume")
         number(reflection, 'reflection', minimum=0, maximum=100)
         self.xmin: float = xmin
         self.ymin: float = ymin
@@ -108,11 +117,12 @@ class BoxObstacle(Obstacle):
         x, y, z = (o + distance * d for o, d in zip(origin, direction))
         return SurfaceHit(x, y, z, distance, self.reflection, cosine)
 
-
     def to_svg(self) -> str:
         '''
         Return the obstacle footprint as an SVG element.
         '''
-        return (f'<rect x="{self.xmin}" y="{-self.ymax}" '
-                f'width="{self.xmax-self.xmin}" height="{self.ymax-self.ymin}" '
-                'fill="#e57235"/>')
+        return (
+            f'<rect x="{self.xmin}" y="{-self.ymax}" '
+            f'width="{self.xmax - self.xmin}" '
+            f'height="{self.ymax - self.ymin}" fill="#e57235"/>'
+        )

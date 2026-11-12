@@ -10,8 +10,10 @@ class Model(ABC):
 
     Attributes:
         step_priority (float): Clock update phase; smaller phases run first.
-        _time_constant_s (float): Stored device response time constant in seconds.
-        time_constant_s (float): Read-only device response time constant in seconds.
+        _time_constant_s (float): Stored device response time constant in
+            seconds.
+        time_constant_s (float): Read-only device response time constant in
+            seconds.
     '''
 
     # Independent physical devices are stepped before bodies and controllers.

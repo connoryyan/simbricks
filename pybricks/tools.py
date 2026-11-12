@@ -18,12 +18,16 @@ class StopWatch:
     Measure simulation time while excluding paused intervals.
 
     Attributes:
-        _start_ms (float): Simulation time when the stopwatch last started or reset, in
+        _start_ms (float): Simulation time when the stopwatch last started or
+            reset, in
             ms.
         _paused (bool): Whether elapsed stopwatch time is frozen.
-        _paused_at_ms (float): Simulation time when the current pause began, in ms.
-        _accumulated_pause_ms (float): Total duration of completed pauses, in ms.
+        _paused_at_ms (float): Simulation time when the current pause began, in
+            ms.
+        _accumulated_pause_ms (float): Total duration of completed pauses, in
+            ms.
     '''
+
     def __init__(self) -> None:
         '''
         Start a stopwatch using the current simulation time.
@@ -41,7 +45,8 @@ class StopWatch:
             int | float: Elapsed time in ms.
         '''
         if self._paused:
-            return self._paused_at_ms - self._start_ms - self._accumulated_pause_ms
+            return (self._paused_at_ms - self._start_ms
+                    - self._accumulated_pause_ms)
         return clock.time_ms - self._start_ms - self._accumulated_pause_ms
 
     def pause(self) -> None:

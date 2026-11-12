@@ -14,8 +14,8 @@ python -B examples/line_follow/line_follow.py
 ```
 
 For a map using force contact, finite wheel friction and gyro feedback, run
-`python -B examples/force_contact/force_contact.py`. It saves a video beside the
-script. See [examples/force_contact/README.md](examples/force_contact/README.md).
+`python -B examples/force_contact/force_contact.py`. It calibrates the IMU, drives
+on a slippery floor and stops when the front force sensor reaches 3 N.
 
 The map has a winding 20 mm black line and a 150 mm high obstacle at its end.
 The robot starts on the line centre. A downward colour sensor sits 10 mm above
@@ -52,6 +52,11 @@ Call `robot.hold()` to cancel an active move and hold the current wheel position
 Public APIs reject incorrect argument types and values before changing simulation
 state. See [docs/validation.md](docs/validation.md) for the parameter rules.
 
+`World.save_preview(path, trace)` handles file write errors inside the class.
+It returns `True` on success or `False` on an `OSError`. Inspect
+`field.preview_error` for the cause; a successful retry clears it. Invalid
+arguments still raise their normal exceptions.
+
 Install the test dependencies and run the tests from the repository root:
 
 ```powershell
@@ -59,7 +64,19 @@ python -m pip install -r requirements-dev.txt
 python -B -m pytest
 ```
 
+Run the integration checks separately with `python -B main.py`. They check
+geared motors, DriveBase motion, sensor mounting and map readings, shared IMU
+calibration and turning, wheel slip, force readings and braking, and SVG save
+failure and retry. Failed assertions stop the checks with an error. The entry
+point restores the previous simulation state and requires no pytest dependency.
+
+Check Python code against PEP 8 with `python -m flake8`. Lines use a maximum
+of 79 characters. Standalone examples may import local packages after adding
+the repository root to the import path. Format Python files with
+`python -m autopep8 --in-place --recursive sim pybricks world maps render examples tests`.
+Docstrings keep triple single quotes.
+
 Tests use pytest assertions and fixtures. Coverage includes `sim`, `pybricks`,
-`world`, `maps`, `render` and `examples`, with a required 100% statement and branch
+`world`, `maps`, `render`, `examples` and `main`, with a required 100% statement and branch
 coverage. Open `htmlcov/index.html` for the detailed report. FFmpeg on PATH enables
 the real MP4 export test; encoder failure tests use a substitute process.

@@ -8,7 +8,8 @@ from pybricks.tools import StopWatch, wait
 
 
 def _make_robot():
-    return DriveBase(Motor(Port.B, Direction.COUNTERCLOCKWISE), Motor(Port.D), 56, 112)
+    return DriveBase(Motor(Port.B, Direction.COUNTERCLOCKWISE),
+                     Motor(Port.D), 56, 112)
 
 
 def test_official_initialization_sequence(initialized):

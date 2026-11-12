@@ -156,15 +156,12 @@ def test_hold_requires_initialization():
 
 def test_model_import_does_not_load_pybricks(initialized):
     subprocess.run(
-        [
-            sys.executable,
-            '-B',
-            '-c',
-            "from sim.models import DriveBaseModel, MotorModel; import sys; assert not any(n == 'pybricks' or n.startswith('pybricks.') for n in sys.modules)",
-        ],
+        [sys.executable, '-B', '-c',
+         "from sim.models import DriveBaseModel, MotorModel; import sys; "
+         "assert not any(n == 'pybricks' or n.startswith('pybricks.') "
+         "for n in sys.modules)"],
         cwd=Path(__file__).resolve().parents[1],
-        check=True,
-    )
+        check=True,)
 
 
 def test_raw_models_drive_without_device_wrappers(initialized):
@@ -249,9 +246,11 @@ def test_invalid_models_and_signs_are_rejected(initialized):
     left, right = (MotorModel(), MotorModel())
     for first, second in ((object(), right), (left, object())):
         with pytest.raises(TypeError):
-            DriveBaseModel(left_model=first, right_model=second, wheel_diameter=56, axle_track=112)
+            DriveBaseModel(left_model=first, right_model=second,
+                           wheel_diameter=56, axle_track=112)
     with pytest.raises(ValueError):
-        DriveBaseModel(left_model=left, right_model=left, wheel_diameter=56, axle_track=112)
+        DriveBaseModel(left_model=left, right_model=left,
+                       wheel_diameter=56, axle_track=112)
     with pytest.raises(TypeError):
         DriveBaseModel(
             left_model=left,
@@ -293,7 +292,8 @@ def test_wheel_direction_types_and_extreme_geometry():
         )
     for diameter, track in ((1e-323, 112), (56, 1e+308), (56, 1e-300)):
         with pytest.raises(ValueError):
-            DriveBaseModel(left_model=left, right_model=right, wheel_diameter=diameter, axle_track=track)
+            DriveBaseModel(left_model=left, right_model=right,
+                           wheel_diameter=diameter, axle_track=track)
     assert clock.steppables == before
 
 
@@ -366,9 +366,13 @@ def test_robot_gyro_brake_and_maneuver(robot):
 
 def test_invalid_body_geometry():
     left, right = (MotorModel(), MotorModel())
-    for diameter, track, error in (('56', 112, TypeError), (56, None, TypeError), (0, 112, ValueError)):
+    for diameter, track, error in (
+        ('56', 112, TypeError),
+        (56, None, TypeError),
+            (0, 112, ValueError)):
         with pytest.raises(error):
-            DriveBaseModel(left_model=left, right_model=right, wheel_diameter=diameter, axle_track=track)
+            DriveBaseModel(left_model=left, right_model=right,
+                           wheel_diameter=diameter, axle_track=track)
     with pytest.raises(TypeError):
         DriveBase(object(), object(), 56, 112)
 
@@ -396,7 +400,8 @@ def test_drivebase_arguments_are_atomic(robot):
         robot.drive(100, 20)
         robot.straight(10, wait=False)
         maneuver = robot._maneuver
-        targets = (robot._left.model._target_speed_dps, robot._right.model._target_speed_dps)
+        targets = (robot._left.model._target_speed_dps,
+                   robot._right.model._target_speed_dps)
         settings = robot.settings()
         for operation in (
             lambda: robot.drive(bad, 0),
@@ -415,7 +420,8 @@ def test_drivebase_arguments_are_atomic(robot):
                 operation()
             assert robot._maneuver is maneuver
             assert robot.settings() == settings
-            assert (robot._left.model._target_speed_dps, robot._right.model._target_speed_dps) == targets
+            assert (robot._left.model._target_speed_dps,
+                    robot._right.model._target_speed_dps) == targets
             assert robot.pose() == (0, 0, 0)
             assert not robot.model.friction_enabled
             assert clock.time_ms == 0

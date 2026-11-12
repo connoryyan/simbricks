@@ -77,7 +77,10 @@ def test_tilt_changes_both_distance_and_incidence(initialized, white_field):
     assert _color_at(10, 30).reflection() == 11
 
 
-def test_sensor_looks_at_ray_hit_instead_of_point_below_it(initialized, white_field):
+def test_sensor_looks_at_ray_hit_instead_of_point_below_it(
+    initialized,
+    white_field,
+):
     world.current_world = LineWorld(ambient_light=0)
     sensor = _color_at(10, 45, -90, y=15)
     assert sensor.reflection() == 4
@@ -105,7 +108,8 @@ def test_roll_does_not_change_centre_ray(initialized, white_field):
     sensor.set_tilt(45, 123)
     assert sensor.model.view_direction() == direction
     assert sensor.reflection() == reading
-    assert sum((v * v for v in direction)) == pytest.approx(1, abs=5e-08, rel=0)
+    assert sum((v * v for v in direction)
+               ) == pytest.approx(1, abs=5e-08, rel=0)
 
 
 def test_distance_response_can_be_calibrated(initialized, white_field):
@@ -124,7 +128,10 @@ def test_distance_response_can_be_calibrated(initialized, white_field):
         assert len(clock.steppables) == before
 
 
-def test_noise_is_repeatable_and_readings_stay_bounded(initialized, white_field):
+def test_noise_is_repeatable_and_readings_stay_bounded(
+    initialized,
+    white_field,
+):
     first = ColorSensorModel(noise=500, seed=42)
     second = ColorSensorModel(noise=500, seed=42)
     for sensor in (first, second):
@@ -137,7 +144,8 @@ def test_noise_is_repeatable_and_readings_stay_bounded(initialized, white_field)
 
 
 def test_surface_hit_contains_geometry_and_material(initialized, white_field):
-    hit = world.current_world.raycast_surface(1, 2, 10, math.sqrt(0.5), 0, -math.sqrt(0.5), 100)
+    hit = world.current_world.raycast_surface(
+        1, 2, 10, math.sqrt(0.5), 0, -math.sqrt(0.5), 100)
     assert hit.x_mm == pytest.approx(11, abs=5e-08, rel=0)
     assert hit.y_mm == pytest.approx(2, abs=5e-08, rel=0)
     assert hit.z_mm == 0

@@ -11,7 +11,6 @@ from pybricks.pupdevices import ColorSensor, Motor, UltrasonicSensor
 from pybricks.parameters import Direction, Port
 from sim.clock import clock
 import sim
-from render.video import PoseRecorder, save_video
 
 
 SPEED_MM_S = 100.0
@@ -25,6 +24,7 @@ TIMEOUT_MS = 90_000
 
 left = Motor(Port.A, Direction.COUNTERCLOCKWISE)
 right = Motor(Port.B)
+
 db = DriveBase(left, right, wheel_diameter=56, axle_track=112)
 color = ColorSensor(Port.C)
 ultrasonic = UltrasonicSensor(Port.D)
@@ -39,29 +39,17 @@ def init():
     '''
     field = LineFollowWorld()
     world.current_world = field
-    
     db.model.mount(color.model, forward_mm=40, left_mm=10,
                    above_mm=-18, pitch_deg=90)
     db.model.mount(ultrasonic.model, forward_mm=60, above_mm=32)
     db.model.place(50, 0, heading_deg=0)
     return field
+
+
 field = sim.initialize(init)
 
 
-def run(recording=None):
-    '''
-    Follow the left line edge with P control and stop before the obstacle.
-
-    Arg:
-        recording (list | None): Optional list for video pose samples.
-
-    Returns:
-        tuple: Map, robot, recorded poses and final obstacle distance.
-    '''
-    recorder = None
-    if recording is not None:
-        recorder = PoseRecorder(db, (color, ultrasonic), recording, clock)
-        clock.add_steppable(recorder)
+def run():
     timer = StopWatch()
     trace = [db.pose()]
     stopped_for_obstacle = False
@@ -84,14 +72,12 @@ def run(recording=None):
         # Advance the simulated time while the wheels finish braking.
         wait(500)
         trace.append(db.pose())
-        if recorder is not None:
-            clock.remove_steppable(recorder)
 
     if not stopped_for_obstacle:
         raise TimeoutError(
             "Line following timed out before detecting the obstacle")
 
-    print(f"Stopped for obstacle after {timer.time()/1000:.2f} s")
+    print(f"Stopped for obstacle after {timer.time() / 1000:.2f} s")
     print(f"Pose (mm, mm, deg): {db.pose()}")
     print(f"Obstacle distance: {ultrasonic.distance()} mm")
     print(f"Forward speed after braking: {db.state()[1]:.3f} mm/s")
@@ -114,19 +100,15 @@ def main():
     '''
     Run the simulation and save recorded frames even after a timeout.
     '''
-    recording = []
     try:
-        field, db, trace, distance = run(recording)
+        field, db, trace, distance = run()
     except TimeoutError as err:
         print(f"Simulation timeout: {err}", file=sys.stderr)
         field = world.get_current_world()
 
-    if not recording:
-        print("No recorded frames to save", file=sys.stderr)
-        return
-    video_path = Path(__file__).resolve().with_name('line_follow.mp4')
-    save_video(video_path, field, recording)
-    print(f"Video saved to {video_path}")
+    path = Path(__file__).resolve().with_name('map_visual.svg')
+    save_map(path, field, trace)
+    print("SVG file saved.")
 
 
 if __name__ == '__main__':

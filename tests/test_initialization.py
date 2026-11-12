@@ -16,7 +16,8 @@ def test_error_has_a_default_message_and_accepts_custom_messages():
     assert 'Simulation is not initialized' in message
     assert 'sim.initialize(init)' in message
     assert 'sim.run(init, main)' in message
-    assert str(sim.NotInitializedError('Custom setup error')) == 'Custom setup error'
+    assert str(sim.NotInitializedError(
+        'Custom setup error')) == 'Custom setup error'
 
 
 def test_missing_init_uses_default_message():
@@ -76,7 +77,8 @@ def test_program_controls_mounts_places_and_field():
 
     def init():
         world.current_world = FlatWhiteWorld()
-        robot.model.mount(sensor.model, forward_mm=50, left_mm=10, above_mm=-18, pitch_deg=90)
+        robot.model.mount(sensor.model, forward_mm=50,
+                          left_mm=10, above_mm=-18, pitch_deg=90)
         robot.model.place(100, 200, 90)
         return sensor.pose()
     pose = sim.initialize(init)

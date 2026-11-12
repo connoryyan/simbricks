@@ -19,7 +19,10 @@ def test_ideal_mode_preserves_encoder_based_pose(robot, flat_field):
     assert robot.pose()[0] == pytest.approx(robot.distance(), abs=5e-08, rel=0)
 
 
-def test_mirrored_motor_directions_preserve_friction_trajectory(robot, flat_field):
+def test_mirrored_motor_directions_preserve_friction_trajectory(
+    robot,
+    flat_field,
+):
     baseline_left, baseline_right = (Motor(Port.A), Motor(Port.F))
     baseline = DriveBase(baseline_left, baseline_right, 56, 112)
     flat_field.friction_coefficient = 0.02
@@ -34,7 +37,9 @@ def test_mirrored_motor_directions_preserve_friction_trajectory(robot, flat_fiel
     assert baseline_left.model.speed > 0
     for actual, expected in zip(robot.pose(), baseline.pose()):
         assert actual == pytest.approx(expected, abs=5e-10, rel=0)
-    assert robot.distance() == pytest.approx(baseline.distance(), abs=5e-08, rel=0)
+    assert robot.distance() == pytest.approx(
+        baseline.distance(), abs=5e-08, rel=0,
+    )
     assert robot.angle() == pytest.approx(baseline.angle(), abs=5e-08, rel=0)
     robot.brake()
     baseline.brake()
@@ -102,7 +107,10 @@ def test_frictionless_body_preserves_world_momentum(robot, flat_field):
     assert robot.model.velocity_mm_s() == before
 
 
-def test_different_wheel_surfaces_produce_real_yaw_and_imu_error(robot, flat_field):
+def test_different_wheel_surfaces_produce_real_yaw_and_imu_error(
+    robot,
+    flat_field,
+):
     flat_field.get_friction_at = lambda x, y: 0.01 if y > 0 else 0.8
     robot.model.configure_friction()
     imu = robot.model.imu
@@ -143,7 +151,10 @@ def test_imu_uses_actual_acceleration_and_lateral_motion(robot, flat_field):
     assert imu._acceleration[:2] == (0, 0)
 
 
-def test_mounts_follow_true_pose_and_placement_clears_momentum(robot, flat_field):
+def test_mounts_follow_true_pose_and_placement_clears_momentum(
+    robot,
+    flat_field,
+):
     sensor = ColorSensor(Port.C)
     robot.model.mount(sensor.model, forward_mm=40, above_mm=-18, pitch_deg=90)
     robot.model.configure_friction()
@@ -159,7 +170,8 @@ def test_mounts_follow_true_pose_and_placement_clears_momentum(robot, flat_field
 
 
 def test_invalid_parameters_do_not_change_configuration(robot, flat_field):
-    for args in ({'mass_kg': 0}, {'yaw_inertia_kg_m2': -1}, {'contact_stiffness': float('nan')}):
+    for args in ({'mass_kg': 0}, {'yaw_inertia_kg_m2': -1},
+                 {'contact_stiffness': float('nan')}):
         with pytest.raises(ValueError):
             robot.model.configure_friction(**args)
         assert not robot.model.friction_enabled

@@ -33,7 +33,8 @@ class Direction(Enum):
     Attributes:
         _value_ (int): Stored motor polarity sign, +1 or -1.
         CLOCKWISE (Direction): Clockwise rotation with polarity +1.
-        COUNTERCLOCKWISE (Direction): Counter-clockwise rotation with polarity -1.
+        COUNTERCLOCKWISE (Direction): Counter-clockwise rotation with polarity
+            -1.
         name (str): Name of the selected enum member.
         value (int): Polarity sign used by signed motor commands.
     '''

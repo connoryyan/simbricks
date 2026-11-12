@@ -9,14 +9,23 @@ class SurfaceHit:
         x_mm (float): World x coordinate in mm.
         y_mm (float): World y coordinate in mm.
         z_mm (float): World height in mm.
-        distance_mm (float): Non-negative distance from the ray origin to a surface hit,
+        distance_mm (float): Non-negative distance from the ray origin to a
+            surface hit,
             in mm.
         reflection (float): Reflection from 0 to 100.
-        incidence_cosine (float): Cosine of the ray incidence angle, from 0 to 1.
+        incidence_cosine (float): Cosine of the ray incidence angle, from 0 to
+            1.
     '''
-    def __init__(self, x_mm: float, y_mm: float, z_mm: float,
-                 distance_mm: float, reflection: float,
-                 incidence_cosine: float) -> None:
+
+    def __init__(
+        self,
+        x_mm: float,
+        y_mm: float,
+        z_mm: float,
+        distance_mm: float,
+        reflection: float,
+        incidence_cosine: float,
+    ) -> None:
         '''
         Create a validated surface hit.
 
@@ -41,5 +50,3 @@ class SurfaceHit:
         self.distance_mm: float = distance_mm
         self.reflection: float = reflection
         self.incidence_cosine: float = incidence_cosine
-
-

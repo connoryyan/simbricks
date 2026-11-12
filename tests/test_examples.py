@@ -28,11 +28,13 @@ def _check_example_entrypoints(filename, entrypoint, monkeypatch, capsys):
 
 
 def test_friction_script(monkeypatch, capsys):
-    _check_example_entrypoints('friction_test.py', '__main__', monkeypatch, capsys)
+    _check_example_entrypoints(
+        'friction_test.py', '__main__', monkeypatch, capsys)
 
 
 def test_import_friction_example(monkeypatch, capsys):
-    _check_example_entrypoints('friction_test.py', 'example', monkeypatch, capsys)
+    _check_example_entrypoints(
+        'friction_test.py', 'example', monkeypatch, capsys)
 
 
 def test_imu_script(monkeypatch, capsys):
@@ -44,7 +46,8 @@ def test_import_imu_example(monkeypatch, capsys):
 
 
 def test_motor_script(monkeypatch, capsys):
-    _check_example_entrypoints('motor_test.py', '__main__', monkeypatch, capsys)
+    _check_example_entrypoints(
+        'motor_test.py', '__main__', monkeypatch, capsys)
 
 
 def test_import_motor_example(monkeypatch, capsys):
@@ -52,16 +55,19 @@ def test_import_motor_example(monkeypatch, capsys):
 
 
 def test_line_follow_script(monkeypatch, capsys):
-    _check_example_entrypoints('line_follow/line_follow.py', '__main__', monkeypatch, capsys)
+    _check_example_entrypoints(
+        'line_follow/line_follow.py', '__main__', monkeypatch, capsys)
 
 
 def test_import_line_follow_example(monkeypatch, capsys):
-    _check_example_entrypoints('line_follow/line_follow.py', 'example', monkeypatch, capsys)
+    _check_example_entrypoints(
+        'line_follow/line_follow.py', 'example', monkeypatch, capsys)
 
 
 def test_line_follow_main_without_frames(monkeypatch, capsys):
     from examples.line_follow import line_follow
-    monkeypatch.setattr(line_follow, 'run', lambda recording: (None, None, [], 0))
+    monkeypatch.setattr(line_follow, 'run',
+                        lambda recording: (None, None, [], 0))
     line_follow.main()
     assert 'No recorded frames' in capsys.readouterr().err
 

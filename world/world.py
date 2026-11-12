@@ -18,13 +18,23 @@ class World(ABC):
         bounds (tuple): Preview rectangle (xmin, ymin, xmax, ymax) in world mm.
         lines (list): Ground lines contributing to reflection readings.
         obstacles (list): Obstacle shapes tested by surface rays.
-        friction_coefficient (float): Uniform non-negative ground friction coefficient.
-        _friction_coefficient (float): Stored coefficient backing friction_coefficient.
+        friction_coefficient (float): Uniform non-negative ground friction
+            coefficient.
+        _friction_coefficient (float): Stored coefficient backing
+            friction_coefficient.
         _ambient_light (float): Stored ambient signal backing ambient_light.
+        preview_error (OSError | None): Last SVG write error, or None after
+            a successful write.
     '''
     @abstractmethod
-    def __init__(self, ambient_light: float = 15.0, *, reflection: float = 85,
-                 bounds = (-100, -380, 2600, 320), friction_coefficient: float = 0.8) -> None:
+    def __init__(
+        self,
+        ambient_light: float = 15.0,
+        *,
+        reflection: float = 85,
+        bounds=(-100, -380, 2600, 320),
+        friction_coefficient: float = 0.8,
+    ) -> None:
         '''
         Create the common map state.
 
@@ -44,6 +54,7 @@ class World(ABC):
         self.lines: list[Line] = []
         self.obstacles: list[Obstacle] = []
         self.friction_coefficient: float = friction_coefficient
+        self.preview_error: OSError | None = None
 
     @property
     def friction_coefficient(self) -> float:
@@ -128,9 +139,16 @@ class World(ABC):
         number(z_mm, 'z_mm', minimum=0)
         return self.ambient_light
 
-    def raycast_surface(self, x_mm: float, y_mm: float, z_mm: float,
-                        dx: float, dy: float, dz: float,
-                        max_mm: float) -> SurfaceHit | None:
+    def raycast_surface(
+        self,
+        x_mm: float,
+        y_mm: float,
+        z_mm: float,
+        dx: float,
+        dy: float,
+        dz: float,
+        max_mm: float,
+    ) -> SurfaceHit | None:
         '''
         Find the nearest ground or obstacle surface along a unit ray.
 
@@ -144,7 +162,8 @@ class World(ABC):
             max_mm (float): Maximum ray distance in mm.
 
         Returns:
-            SurfaceHit | None: Nearest surface hit, or None when no surface is seen.
+            SurfaceHit | None: Nearest surface hit, or None when no surface is
+                seen.
         '''
         vector((x_mm, y_mm, z_mm), 'origin', 3)
         unit_vector((dx, dy, dz), 'direction')
@@ -158,8 +177,10 @@ class World(ABC):
                 hit = SurfaceHit(x, y, 0.0, distance,
                                  self.get_reflection_at(x, y), -dz)
         for obstacle in self.obstacles:
-            candidate = obstacle.raycast((x_mm, y_mm, z_mm), (dx, dy, dz), max_mm)
-            if candidate is not None and (hit is None or candidate.distance_mm < hit.distance_mm):
+            candidate = obstacle.raycast(
+                (x_mm, y_mm, z_mm), (dx, dy, dz), max_mm)
+            if candidate is not None and (
+                    hit is None or candidate.distance_mm < hit.distance_mm):
                 hit = candidate
         return hit
 
@@ -179,9 +200,16 @@ class World(ABC):
         return min((line.get_reflection_at(x_mm, y_mm, self.reflection)
                     for line in self.lines), default=self.reflection)
 
-    def raycast_distance(self, x_mm: float, y_mm: float, heading_deg: float,
-                         max_mm: float = 2000, *, z_mm: float = 0.0,
-                         pitch_deg: float = 0.0) -> float:
+    def raycast_distance(
+        self,
+        x_mm: float,
+        y_mm: float,
+        heading_deg: float,
+        max_mm: float = 2000,
+        *,
+        z_mm: float = 0.0,
+        pitch_deg: float = 0.0,
+    ) -> float:
         '''
         Return the distance to the nearest object along a ray.
 
@@ -200,11 +228,12 @@ class World(ABC):
         number(pitch_deg, 'pitch_deg')
         yaw = math.radians(heading_deg)
         pitch = math.radians(pitch_deg)
-        hit = self.raycast_surface(x_mm, y_mm, z_mm,
-                                  math.cos(pitch)*math.cos(yaw),
-                                  math.cos(pitch)*math.sin(yaw), -math.sin(pitch), max_mm)
+        hit = self.raycast_surface(
+            x_mm, y_mm, z_mm,
+            math.cos(pitch) * math.cos(yaw),
+            math.cos(pitch) * math.sin(yaw), -math.sin(pitch), max_mm,
+        )
         return max_mm if hit is None else hit.distance_mm
-
 
     def add_line(self, line: Line) -> None:
         '''
@@ -222,28 +251,51 @@ class World(ABC):
             raise TypeError("obstacle must be an Obstacle")
         self.obstacles.append(obstacle)
 
-    def save_preview(self, path: str | Path, trace = ()) -> None:
+    def save_preview(self, path: str | Path, trace=()) -> bool:
         '''
         Save the map and optional robot path as an SVG preview.
 
         Arg:
-            path (Path): Output image path.
+            path (str | Path): Output image path.
             trace (tuple): Robot poses as x, y and heading in degrees.
+
+        Returns:
+            bool: True after saving, or False after an OSError. The write
+                error is stored in preview_error. Invalid arguments still
+                raise TypeError or ValueError.
         '''
         sequence(trace, 'trace')
         trace = tuple(vector(pose, 'trace pose', 3) for pose in trace)
         path = Path(path)
         xmin, ymin, xmax, ymax = self.bounds
-        parts = [f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="{xmin} {-ymax} {xmax-xmin} {ymax-ymin}">',
-                 f'<rect x="{xmin}" y="{-ymax}" width="{xmax-xmin}" height="{ymax-ymin}" fill="white"/>']
+        parts = [
+            f'<svg xmlns="http://www.w3.org/2000/svg" '
+            f'viewBox="{xmin} {-ymax} {xmax - xmin} {ymax - ymin}">',
+            f'<rect x="{xmin}" y="{-ymax}" width="{xmax - xmin}" '
+            f'height="{ymax - ymin}" fill="white"/>',
+        ]
         parts.extend(line.to_svg() for line in self.lines)
         parts.extend(obstacle.to_svg() for obstacle in self.obstacles)
         if trace:
             points = ' '.join(f'{x:.2f},{-y:.2f}' for x, y, _ in trace)
-            parts.append(f'<polyline points="{points}" fill="none" stroke="#168dc1" stroke-width="3"/>')
+            parts.append(
+                f'<polyline points="{points}" fill="none" '
+                'stroke="#168dc1" stroke-width="3"/>')
             x, y, yaw = trace[-1]
-            ax, ay = x+70*math.cos(math.radians(yaw)), y+70*math.sin(math.radians(yaw))
-            parts.append(f'<circle cx="{x}" cy="{-y}" r="65" fill="#168dc1" fill-opacity="0.25"/>')
-            parts.append(f'<path d="M{x},{-y} L{ax},{-ay}" stroke="#168dc1" stroke-width="5"/>')
+            ax, ay = x + 70 * \
+                math.cos(math.radians(yaw)), y + 70 * \
+                math.sin(math.radians(yaw))
+            parts.append(
+                f'<circle cx="{x}" cy="{-y}" r="65" '
+                'fill="#168dc1" fill-opacity="0.25"/>')
+            parts.append(
+                f'<path d="M{x},{-y} L{ax},{-ay}" '
+                'stroke="#168dc1" stroke-width="5"/>')
         parts.append('</svg>')
-        Path(path).write_text(''.join(parts), encoding='utf-8')
+        self.preview_error = None
+        try:
+            path.write_text(''.join(parts), encoding='utf-8')
+        except OSError as error:
+            self.preview_error = error
+            return False
+        return True

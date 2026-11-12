@@ -11,7 +11,6 @@ from pybricks.parameters import Direction, Port
 from pybricks.pupdevices import ForceSensor, Motor
 from pybricks.robotics import DriveBase
 from pybricks.tools import StopWatch, wait
-from render.video import PoseRecorder, save_video
 from sim.clock import clock
 from sim.validation import number
 from world import BoxObstacle
@@ -33,8 +32,9 @@ class BumperContact:
     It does not apply collision forces to the drive base.
 
     Attributes:
-        step_priority (int): Update after body motion and before pose recording.
-        sensor (ForceSensor): Front-facing force sensor receiving scripted input.
+        step_priority (int): Update the contact reading after body motion.
+        sensor (ForceSensor): Front-facing force sensor receiving scripted
+            input.
         obstacle (BoxObstacle): Wall pressed by the button.
         stiffness_n_mm (float): Button spring stiffness in N/mm.
         max_travel_mm (float): Maximum simulated button travel in mm.
@@ -101,21 +101,15 @@ def init() -> tuple:
     return field, hub, robot, force, contact
 
 
-def run(recording: list) -> tuple:
+def run() -> tuple:
     '''
-    Use gyro turns on a slippery floor and stop when the button presses the wall.
-
-    Arg:
-        recording (list): Mutable list receiving video pose samples.
+    Use gyro turns on a slippery floor and stop when the button presses the
+        wall.
 
     Returns:
         tuple: Field, stopped drive base and pressed force sensor.
     '''
-    if not isinstance(recording, list):
-        raise TypeError('recording must be a list')
     field, hub, robot, force, contact = sim.initialize(init)
-    recorder = PoseRecorder(robot, (force,), recording, clock)
-    clock.add_steppable(recorder)
     try:
         timer = StopWatch()
         while not hub.imu.ready():
@@ -124,15 +118,21 @@ def run(recording: list) -> tuple:
             wait(10)
         wait(10)
         hub.imu.reset_heading(0)
-        print(f'IMU ready. Corrected gyro rate: {hub.imu.angular_velocity()[2]:.3f} deg/s')
+        print(
+            'IMU ready. Corrected gyro rate: '
+            f'{hub.imu.angular_velocity()[2]:.3f} deg/s')
 
         robot.straight(700, wait=False)
         wait(400)
-        print(f'Acceleration: encoder {robot.distance():.1f} mm, true x {robot.pose()[0]:.1f} mm')
+        print(
+            f'Acceleration: encoder {robot.distance():.1f} mm, '
+            f'true x {robot.pose()[0]:.1f} mm')
         while not robot.done():
             wait(10)
         wait(500)
-        print(f'First leg: encoder {robot.distance():.1f} mm, true x {robot.pose()[0]:.1f} mm')
+        print(
+            f'First leg: encoder {robot.distance():.1f} mm, '
+            f'true x {robot.pose()[0]:.1f} mm')
         robot.turn(-90)
         wait(500)
         robot.straight(400)
@@ -145,14 +145,16 @@ def run(recording: list) -> tuple:
             if timer.time() >= CONTACT_TIMEOUT_MS:
                 raise TimeoutError('No force sensor contact before timeout')
             # Correct clockwise heading towards the original world x direction.
-            turn_rate = max(-40.0, min(40.0, -HEADING_KP * hub.imu.heading()))
+            turn_rate = max(-40.0, min(40.0, -HEADING_KP
+                            * hub.imu.heading()))
             robot.drive(APPROACH_SPEED_MM_S, turn_rate)
             wait(LOOP_MS)
-        print(f'Contact detected: {force.force():.2f} N, travel {force.distance():.2f} mm')
+        print(
+            f'Contact detected: {force.force():.2f} N, '
+            f'travel {force.distance():.2f} mm')
     finally:
         robot.brake()
         wait(1000)
-        clock.remove_steppable(recorder)
         clock.remove_steppable(contact)
 
     print(f'Stopped pose: {robot.pose()}')
@@ -164,17 +166,12 @@ def run(recording: list) -> tuple:
 
 def main() -> None:
     '''
-    Run the example and save a video, including after a timeout.
+    Run the example and report a simulation timeout.
     '''
-    recording = []
     try:
-        run(recording)
+        run()
     except TimeoutError as error:
         print(f'Simulation timeout: {error}', file=sys.stderr)
-    if recording:
-        path = Path(__file__).resolve().with_name('force_contact.mp4')
-        save_video(path, world.get_current_world(), recording)
-        print(f'Video saved to {path}')
 
 
 if __name__ == '__main__':

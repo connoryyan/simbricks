@@ -127,7 +127,8 @@ def test_drivebase_with_different_wheel_gearing(initialized):
     wait(1000)
     assert robot.distance() == pytest.approx(300, abs=3)
     assert robot.pose() == pytest.approx((300, 0, 0), abs=3)
-    assert left.model.angle / -3 == pytest.approx(right.model.angle / 6, abs=0.01)
+    assert left.model.angle / - \
+        3 == pytest.approx(right.model.angle / 6, abs=0.01)
     robot.turn(90)
     wait(1000)
     assert robot.angle() == pytest.approx(90, abs=2)
@@ -135,7 +136,8 @@ def test_drivebase_with_different_wheel_gearing(initialized):
 
 
 def _check_geared_drivebase_matches_direct_drive(friction):
-    geared = DriveBase(Motor(Port.A, gears=[12, 36]), Motor(Port.B, gears=[12, 24]), 56, 112)
+    geared = DriveBase(Motor(Port.A, gears=[12, 36]), Motor(
+        Port.B, gears=[12, 24]), 56, 112)
     direct = DriveBase(Motor(Port.C), Motor(Port.D), 56, 112)
     geared.model.configure_friction(enabled=friction)
     direct.model.configure_friction(enabled=friction)

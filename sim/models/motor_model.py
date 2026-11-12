@@ -9,30 +9,36 @@ class MotorModel(Model):
 
     Attributes:
         step_priority (float): Clock update phase; smaller phases run first.
-        _time_constant_s (float): Stored device response time constant in seconds.
-        time_constant_s (float): Read-only device response time constant in seconds.
+        _time_constant_s (float): Stored device response time constant in
+            seconds.
+        time_constant_s (float): Read-only device response time constant in
+            seconds.
         max_speed_dps (float): Positive raw motor shaft speed limit in deg/s.
         gear_ratio (float): Motor revolutions per gear output revolution.
         _angle_deg (float): Accumulated raw motor shaft angle in degrees.
         _speed_dps (float): Current raw motor shaft speed in deg/s.
-        _target_speed_dps (float): Requested raw motor shaft speed after limiting, in
+        _target_speed_dps (float): Requested raw motor shaft speed after
+            limiting, in
             deg/s.
         _braking (bool): Whether passive electrical braking is active.
-        _hold_angle_deg (float | None): Raw shaft angle to hold in degrees, or None when
+        _hold_angle_deg (float | None): Raw shaft angle to hold in degrees, or
+            None when
             released.
         _max_speed_dps (float): Stored value backing max_speed_dps.
         _gear_ratio (float): Stored positive value backing gear_ratio.
         angle (float): Read-only accumulated raw shaft angle in degrees.
         speed (float): Read-only raw shaft speed in deg/s.
-        output_angle (float): Raw shaft angle divided by gear_ratio, in degrees.
+        output_angle (float): Raw shaft angle divided by gear_ratio, in
+            degrees.
         output_speed (float): Raw shaft speed divided by gear_ratio, in deg/s.
     '''
+
     def __init__(
-            self,
-            time_constant_s: float = 0.15,
-            max_speed_dps: float = 1500.0,
-            gear_ratio: float = 1.0
-        ) -> None:
+        self,
+        time_constant_s: float = 0.15,
+        max_speed_dps: float = 1500.0,
+        gear_ratio: float = 1.0,
+    ) -> None:
         '''
         Create the model.
 
@@ -74,11 +80,11 @@ class MotorModel(Model):
         if self._braking:
             # damping coefficient
             alpha = min(1.0, dt_s / max(self.time_constant_s * 0.3, 1e-6))
-            self._speed_dps += -self._speed_dps * alpha # exponential
+            self._speed_dps += -self._speed_dps * alpha  # exponential
 
         else:
             alpha = min(1.0, dt_s / max(self.time_constant_s, 1e-6))
-            self._speed_dps += (self._target_speed_dps 
+            self._speed_dps += (self._target_speed_dps
                                 - self._speed_dps) * alpha
 
         self._angle_deg += self._speed_dps * dt_s
@@ -105,7 +111,7 @@ class MotorModel(Model):
         self._hold_angle_deg = None
         self._braking = False
         self._target_speed_dps = 0.0
-    
+
     def brake(self) -> None:
         '''
         Brake the motor with electrical resistance.
@@ -200,16 +206,18 @@ class MotorModel(Model):
         This check has no time filter and may be True during startup.
 
         Arg:
-            speed_threshold_dps (float): Non-negative motor shaft speed threshold.
+            speed_threshold_dps (float): Non-negative motor shaft speed
+                threshold.
 
         Returns:
-            bool: Whether target speed is above the threshold and actual speed is below it.
+            bool: Whether target speed is above the threshold and actual speed
+                is below it.
         '''
         number(speed_threshold_dps, 'speed_threshold_dps', minimum=0)
         return (
-            abs(self._target_speed_dps) > speed_threshold_dps 
+            abs(self._target_speed_dps) > speed_threshold_dps
             and abs(self._speed_dps) < speed_threshold_dps
-        ) # A simple way to determine stall.
+        )  # A simple way to determine stall.
 
     def hold(self, angle_deg: float | None = None) -> None:
         '''

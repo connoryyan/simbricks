@@ -97,7 +97,8 @@ def test_stationary_calibration_removes_bias_without_resetting_yaw(hub_robot):
     assert imu.ready()
     assert imu.stationary()
     assert imu.angular_velocity(Axis.Z) == pytest.approx(0, abs=5e-08, rel=0)
-    assert imu.angular_velocity(Axis.Z, calibrated=False) == pytest.approx(1, abs=5e-08, rel=0)
+    assert imu.angular_velocity(
+        Axis.Z, calibrated=False) == pytest.approx(1, abs=5e-08, rel=0)
     assert imu.heading() == pytest.approx(-1, abs=0.01, rel=0)
     heading = imu.heading()
     wait(2000)
@@ -123,7 +124,8 @@ def test_constant_bias_above_stationary_threshold_can_calibrate(hub_robot):
     wait(1100)
     assert imu.ready()
     assert imu.angular_velocity(Axis.Z) == pytest.approx(0, abs=5e-08, rel=0)
-    assert imu.angular_velocity(Axis.Z, calibrated=False) == pytest.approx(10, abs=5e-08, rel=0)
+    assert imu.angular_velocity(
+        Axis.Z, calibrated=False) == pytest.approx(10, abs=5e-08, rel=0)
 
 
 def test_accelerometer_does_not_correct_yaw_drift(hub_robot):
@@ -246,7 +248,8 @@ def test_imu_provider_flags_and_axes(initialized):
         lambda: imu.rotation(None),
         lambda: imu.acceleration(calibrated=0),
         lambda: imu.angular_velocity((True, 0, 1)),
-        lambda: imu.settings(angular_velocity_threshold=5, heading_correction='360'),
+        lambda: imu.settings(angular_velocity_threshold=5,
+                             heading_correction='360'),
     ):
         with pytest.raises(TypeError):
             operation()

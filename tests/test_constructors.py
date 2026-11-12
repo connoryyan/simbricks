@@ -5,13 +5,20 @@ from pybricks.hubs import PrimeHub
 from pybricks.parameters import Color, Port
 from pybricks.pupdevices import ColorSensor, Motor
 from sim.clock import SimClock, clock
-from sim.models import ColorSensorModel, DriveBaseModel, IMUModel, MotorModel, SensorModel
+from sim.models import (
+    ColorSensorModel,
+    DriveBaseModel,
+    IMUModel,
+    MotorModel,
+    SensorModel,
+)
 from world import BoxObstacle, Polyline
 
 
 def test_random_seed_must_be_an_integer():
     for bad in [True, '42', 42.0, b'42']:
-        for create in (lambda: SensorModel(seed=bad), lambda: IMUModel(seed=bad)):
+        for create in (lambda: SensorModel(seed=bad),
+                       lambda: IMUModel(seed=bad)):
             with pytest.raises(TypeError, match='seed'):
                 create()
         assert clock.steppables == ()

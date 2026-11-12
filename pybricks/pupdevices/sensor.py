@@ -1,12 +1,19 @@
-from sim.initialization import requires_init
-from sim.validation import boolean, number, vector as validate_vector
 import math
 from typing import Callable
 
-from sim.models import SensorModel, ColorSensorModel, UltrasonicSensorModel, ForceSensorModel, IMUModel
+from sim.initialization import requires_init
+from sim.validation import boolean, number, vector as validate_vector
+from sim.models import (
+    SensorModel,
+    ColorSensorModel,
+    UltrasonicSensorModel,
+    ForceSensorModel,
+    IMUModel,
+)
 
 from ..parameters import Axis, Color, Port, Side
 from .device import Device
+
 
 class Sensor(Device):
     '''
@@ -14,10 +21,12 @@ class Sensor(Device):
 
     Attributes:
         port (Port): Port the device is connected to.
-        _model (Model | None): Simulator model, or None before a concrete device creates
+        _model (Model | None): Simulator model, or None before a concrete
+            device creates
             one.
         model (SensorModel): Simulator model exposed for setup and inspection.
     '''
+
     def __init__(self, port: Port) -> None:
         '''
         Create the sensor.
@@ -53,7 +62,8 @@ class Sensor(Device):
             x_mm (float): World x coordinate in mm.
             y_mm (float): World y coordinate in mm.
             z_mm (float): Height above the ground in mm.
-            yaw_deg (float): Counter-clockwise angle from the world x axis in degrees.
+            yaw_deg (float): Counter-clockwise angle from the world x axis in
+                degrees.
         '''
         self.model.set_pose(x_mm, y_mm, z_mm, yaw_deg)
 
@@ -84,10 +94,12 @@ class ColorSensor(Sensor):
 
     Attributes:
         port (Port): Port the device is connected to.
-        _model (ColorSensorModel): Color sensor model for surface rays, ambient light
+        _model (ColorSensorModel): Color sensor model for surface rays, ambient
+            light
             and noise.
         model (SensorModel): Simulator model exposed for setup and inspection.
     '''
+
     def __init__(self, port: Port) -> None:
         '''
         Create a color sensor and its simulator model.
@@ -124,14 +136,16 @@ class ColorSensor(Sensor):
         '''
         Raise NotImplementedError because surface colors are not simulated.
         '''
-        raise NotImplementedError("ColorSensor.color() needs surface colors in the World")
+        raise NotImplementedError(
+            "ColorSensor.color() needs surface colors in the World")
 
     @requires_init
     def hsv(self) -> tuple[float, float, float]:
         '''
         Raise NotImplementedError because surface HSV values are not simulated.
         '''
-        raise NotImplementedError("ColorSensor.hsv() needs surface colors in the World")
+        raise NotImplementedError(
+            "ColorSensor.hsv() needs surface colors in the World")
 
 
 class UltrasonicSensor(Sensor):
@@ -140,10 +154,12 @@ class UltrasonicSensor(Sensor):
 
     Attributes:
         port (Port): Port the device is connected to.
-        _model (UltrasonicSensorModel): Ultrasonic model casting a ray from the sensor
+        _model (UltrasonicSensorModel): Ultrasonic model casting a ray from the
+            sensor
             pose.
         model (SensorModel): Simulator model exposed for setup and inspection.
     '''
+
     def __init__(self, port: Port) -> None:
         '''
         Create an ultrasonic sensor and its simulator model.
@@ -171,10 +187,12 @@ class ForceSensor(Sensor):
 
     Attributes:
         port (Port): Port the device is connected to.
-        _model (ForceSensorModel): Force sensor model storing scripted force and
+        _model (ForceSensorModel): Force sensor model storing scripted force
+            and
             displacement.
         model (SensorModel): Simulator model exposed for setup and inspection.
     '''
+
     def __init__(self, port: Port) -> None:
         '''
         Create a force sensor with scripted simulator input.
@@ -215,7 +233,10 @@ class ForceSensor(Sensor):
         return self.distance() > 0 or self.force() > 0
 
 
-def _project(vector: tuple[float, float, float] | list[float], axis: Axis | tuple[float, float, float] | list[float] | None) -> float | tuple[float, float, float]:
+def _project(
+    vector: tuple[float, float, float] | list[float],
+    axis: Axis | tuple[float, float, float] | list[float] | None,
+) -> float | tuple[float, float, float]:
     '''
     Project a three-dimensional vector onto a normalized axis.
 
@@ -236,7 +257,7 @@ def _project(vector: tuple[float, float, float] | list[float], axis: Axis | tupl
     number(length, 'axis length')
     if length == 0:
         raise ValueError('axis cannot be zero')
-    return sum(v*(a/length) for v, a in zip(vector, values))
+    return sum(v * (a / length) for v, a in zip(vector, values))
 
 
 class IMU:
@@ -244,16 +265,19 @@ class IMU:
     Read the shared IMU model for a level robot.
 
     Attributes:
-        _model (IMUModel | callable): IMU model or provider returning the current shared
+        _model (IMUModel | callable): IMU model or provider returning the
+            current shared
             model.
         model (IMUModel): Resolved and validated IMU model.
     '''
+
     def __init__(self, model: IMUModel | Callable[[], IMUModel]) -> None:
         '''
         Connect the IMU interface to a simulator model.
 
         Arg:
-            model (IMUModel | callable): Model or function returning the current model.
+            model (IMUModel | callable): Model or function returning the
+                current model.
         '''
         if not isinstance(model, IMUModel) and not callable(model):
             raise TypeError('model must be an IMUModel or a model provider')
@@ -292,7 +316,8 @@ class IMU:
         Return zero pitch and roll for a level robot.
 
         Arg:
-            calibrated (bool): Compatibility flag; both values return the same tilt.
+            calibrated (bool): Compatibility flag; both values return the same
+                tilt.
 
         Returns:
             tuple[int, int]: Pitch and roll in degrees.
@@ -329,23 +354,33 @@ class IMU:
         return 0
 
     @requires_init
-    def angular_velocity(self, axis: Axis | tuple[float, float, float] | list[float] | None = None, calibrated: bool = True) -> float | tuple[float, float, float]:
+    def angular_velocity(
+        self,
+        axis: Axis | tuple[float, float, float] | list[float] | None = None,
+        calibrated: bool = True,
+    ) -> float | tuple[float, float, float]:
         '''
         Return right-hand angular velocity along an axis or as a vector.
 
         Arg:
-            axis (Axis | tuple | list | None): Non-zero axis, or None for all components.
+            axis (Axis | tuple | list | None): Non-zero axis, or None for all
+                components.
             calibrated (bool): Subtract the estimated gyro bias when True.
 
         Returns:
             float | tuple: Angular velocity in deg/s.
         '''
         boolean(calibrated, 'calibrated')
-        rate = self.model.calibrated_rate if calibrated else self.model.raw_rate
+        rate = (self.model.calibrated_rate if calibrated
+                else self.model.raw_rate)
         return _project((0.0, 0.0, rate), axis)
 
     @requires_init
-    def rotation(self, axis: Axis | tuple[float, float, float] | list[float] | None, calibrated: bool = True) -> float:
+    def rotation(
+        self,
+        axis: Axis | tuple[float, float, float] | list[float] | None,
+        calibrated: bool = True,
+    ) -> float:
         '''
         Return integrated right-hand rotation along an axis.
 
@@ -359,17 +394,24 @@ class IMU:
         boolean(calibrated, 'calibrated')
         if axis is None:
             raise TypeError('axis must be an Axis or a three-component vector')
-        rotation = self.model.calibrated_rotation if calibrated else self.model.raw_rotation
+        rotation = (self.model.calibrated_rotation if calibrated
+                    else self.model.raw_rotation)
         return _project((0.0, 0.0, rotation), axis)
 
     @requires_init
-    def acceleration(self, axis: Axis | tuple[float, float, float] | list[float] | None = None, calibrated: bool = True) -> float | tuple[float, float, float]:
+    def acceleration(
+        self,
+        axis: Axis | tuple[float, float, float] | list[float] | None = None,
+        calibrated: bool = True,
+    ) -> float | tuple[float, float, float]:
         '''
         Return axle-center acceleration including gravity.
 
         Arg:
-            axis (Axis | tuple | list | None): Non-zero axis, or None for all components.
-            calibrated (bool): Compatibility flag; simulated acceleration is unchanged.
+            axis (Axis | tuple | list | None): Non-zero axis, or None for all
+                components.
+            calibrated (bool): Compatibility flag; simulated acceleration is
+                unchanged.
 
         Returns:
             float | tuple: Acceleration in mm/s/s.
@@ -380,7 +422,8 @@ class IMU:
     @requires_init
     def ready(self) -> bool:
         '''
-        Return whether a stationary calibration occurred in the last ten minutes.
+        Return whether a stationary calibration occurred in the last ten
+            minutes.
         '''
         return self.model.ready()
 
@@ -391,21 +434,30 @@ class IMU:
         '''
         return self.model.stationary()
 
-    def settings(self, angular_velocity_threshold: float | None = None, acceleration_threshold: float | None = None,
-                 heading_correction: float | None = None) -> tuple[float, ...] | None:
+    def settings(
+        self,
+        angular_velocity_threshold: float | None = None,
+        acceleration_threshold: float | None = None,
+        heading_correction: float | None = None,
+    ) -> tuple[float, ...] | None:
         '''
         Get or set stationary thresholds and heading correction.
 
         Arg:
-            angular_velocity_threshold (float | None): Stationary gyro limit in deg/s.
-            acceleration_threshold (float | None): Stationary acceleration limit in mm/s/s.
-            heading_correction (float | None): Reported degrees per true full rotation.
+            angular_velocity_threshold (float | None): Stationary gyro limit in
+                deg/s.
+            acceleration_threshold (float | None): Stationary acceleration
+                limit in mm/s/s.
+            heading_correction (float | None): Reported degrees per true full
+                rotation.
 
         Returns:
             tuple | None: Current settings when called without arguments.
         '''
-        names = ('angular_velocity_threshold', 'acceleration_threshold', 'heading_correction')
-        values = (angular_velocity_threshold, acceleration_threshold, heading_correction)
+        names = ('angular_velocity_threshold',
+                 'acceleration_threshold', 'heading_correction')
+        values = (angular_velocity_threshold,
+                  acceleration_threshold, heading_correction)
         if all(v is None for v in values):
             return tuple(getattr(self.model, name) for name in names)
         for name, value in zip(names, values):
@@ -414,6 +466,7 @@ class IMU:
         updated = tuple(getattr(self.model, name) if v is None else v
                         for name, v in zip(names, values))
         if self.model.in_use:
-            raise OSError('Stop the gyro drive base before changing IMU settings')
+            raise OSError(
+                'Stop the gyro drive base before changing IMU settings')
         for name, value in zip(names, updated):
             setattr(self.model, name, value)

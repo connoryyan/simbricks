@@ -20,7 +20,8 @@ def test_mount_uses_axle_height_and_only_stores_model(robot):
     robot.model.mount(sensor.model, 50, 10, -18, 15, 90, 5)
     _assert_pose(sensor.pose(), (50, 10, 10, 15, 90, 5))
     assert sensor.pose() == sensor.model.pose()
-    assert robot.model._mounts[sensor.model] == {'forward_mm': 50, 'left_mm': 10, 'z_mm': 10, 'yaw_deg': 15}
+    assert robot.model._mounts[sensor.model] == {
+        'forward_mm': 50, 'left_mm': 10, 'z_mm': 10, 'yaw_deg': 15}
     with pytest.raises(AttributeError):
         sensor.model = ColorSensorModel()
 
@@ -85,7 +86,8 @@ def test_raw_models_can_mount_without_sensor_wrapper(robot):
 def test_duplicate_and_invalid_mounts_do_not_change_sensor(robot):
     sensor = ColorSensor(Port.C)
     before = sensor.pose()
-    for kwargs in ({'above_mm': -29}, {'yaw_deg': float('nan')}, {'pitch_deg': float('inf')}):
+    for kwargs in ({'above_mm': -29}, {'yaw_deg': float('nan')},
+                   {'pitch_deg': float('inf')}):
         with pytest.raises(ValueError):
             robot.model.mount(sensor.model, **kwargs)
         assert sensor.pose() == before

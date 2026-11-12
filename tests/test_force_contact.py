@@ -47,13 +47,11 @@ def test_contact_arguments():
         example.BumperContact(sensor, None)
     with pytest.raises(ValueError):
         example.BumperContact(sensor, wall).step(0)
-    with pytest.raises(TypeError):
-        example.run(None)
 
 
 def test_slippery_robot_stops_on_force_contact(capsys):
-    frames = []
-    field, robot, sensor = example.run(frames)
+    field, robot, sensor = example.run()
+    assert field is world.current_world
     wall = field.obstacles[0]
     assert robot.model.friction_enabled
     assert robot._use_gyro
@@ -66,62 +64,35 @@ def test_slippery_robot_stops_on_force_contact(capsys):
     assert robot.pose()[0] + 55 < wall.xmin
     assert wall.ymin < robot.pose()[1] < wall.ymax
     assert abs(robot.model.speed_mm_s()) < 0.01
-    assert len(frames) > 100
-    assert frames[0][1] == (0, 0, 0)
-    assert all(len(frame[2]) == 1 for frame in frames)
-    assert not any(isinstance(item, example.BumperContact) for item in clock.steppables)
-    assert not any(isinstance(item, example.PoseRecorder) for item in clock.steppables)
+    assert not any(isinstance(item, example.BumperContact)
+                   for item in clock.steppables)
     assert 'Contact detected' in capsys.readouterr().out
 
 
 def test_contact_timeout_stops_and_detaches(monkeypatch):
     monkeypatch.setattr(example, 'CONTACT_TIMEOUT_MS', 0)
-    frames = []
     with pytest.raises(TimeoutError, match='No force sensor contact'):
-        example.run(frames)
-    assert len(frames) > 1
-    assert not any(isinstance(item, example.BumperContact) for item in clock.steppables)
-    assert not any(isinstance(item, example.PoseRecorder) for item in clock.steppables)
-    bodies = [item for item in clock.steppables if isinstance(item, example.DriveBase)]
+        example.run()
+    assert not any(isinstance(item, example.BumperContact)
+                   for item in clock.steppables)
+    bodies = [item for item in clock.steppables if isinstance(
+        item, example.DriveBase)]
     assert abs(bodies[0].model.speed_mm_s()) < 0.01
 
 
-def test_calibration_timeout_still_saves_video(monkeypatch, capsys):
-    saved = []
-
-    def save(path, field, frames):
-        saved.append((path, field, frames))
-
+def test_calibration_timeout_is_reported_and_detaches(monkeypatch, capsys):
     monkeypatch.setattr(example, 'CALIBRATION_TIMEOUT_MS', 0)
-    monkeypatch.setattr(example, 'save_video', save)
     example.main()
     assert 'IMU calibration timed out' in capsys.readouterr().err
-    assert len(saved) == 1
-    assert saved[0][0].name == 'force_contact.mp4'
-    assert saved[0][1] is world.current_world
-    assert len(saved[0][2]) > 1
+    assert isinstance(world.current_world, ForceContactWorld)
+    assert not any(isinstance(item, example.BumperContact)
+                   for item in clock.steppables)
 
 
-def test_example_script_entrypoint(monkeypatch):
-    saved = []
+def test_example_script_entrypoint(monkeypatch, capsys):
     monkeypatch.setattr(sys, 'path', sys.path.copy())
-
-    def save(path, field, frames):
-        saved.append((path, frames))
-
-    # Replace the exporter imported by the script, while keeping the real run loop.
-    import render.video
-    monkeypatch.setattr(render.video, 'save_video', save)
     path = Path(example.__file__)
     runpy.run_path(str(path), run_name='__main__')
-    assert len(saved) == 1
-    assert len(saved[0][1]) > 100
-
-
-def test_main_without_recorded_frames(monkeypatch):
-    def save(path, field, frames):
-        pytest.fail('No frames')
-
-    monkeypatch.setattr(example, 'run', lambda frames: None)
-    monkeypatch.setattr(example, 'save_video', save)
-    example.main()
+    output = capsys.readouterr().out
+    assert 'Contact detected' in output
+    assert 'Stopped pose' in output

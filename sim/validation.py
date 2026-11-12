@@ -1,7 +1,14 @@
 import math
 
 
-def number(value: object, name: str, *, minimum: float | None = None, maximum: float | None = None, positive: bool = False) -> float:
+def number(
+    value: object,
+    name: str,
+    *,
+    minimum: float | None = None,
+    maximum: float | None = None,
+    positive: bool = False,
+) -> float:
     '''
     Check a finite int or float without accepting bool or numeric strings.
     '''
@@ -42,7 +49,11 @@ def integer(value: object, name: str, *, minimum: int | None = None) -> int:
     return value
 
 
-def sequence(value: object, name: str, length: int | None = None) -> list[object] | tuple[object, ...]:
+def sequence(
+    value: object,
+    name: str,
+    length: int | None = None,
+) -> list[object] | tuple[object, ...]:
     '''
     Check a list or tuple and its optional length.
     '''

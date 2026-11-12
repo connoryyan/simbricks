@@ -11,7 +11,6 @@ from pybricks.tools import wait
 import sim
 
 
-
 hub = PrimeHub()
 left = Motor(Port.B, Direction.COUNTERCLOCKWISE)
 right = Motor(Port.D)
@@ -27,6 +26,8 @@ def init(robot):
     from maps.flat_white.world import FlatWhiteWorld
     world.current_world = FlatWhiteWorld()
     robot.model.place(0, 0, 0)
+
+
 sim.initialize(init, db)
 
 

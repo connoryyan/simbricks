@@ -9,10 +9,12 @@ if TYPE_CHECKING:
         '''
         Describe an object that advances through step(dt_s).
         '''
-        def step(self, dt_s: float) -> None: ...
+
+        def step(self, dt_s: float) -> None:
+            ...
 
 
-STEP_MS = 5 # dt
+STEP_MS = 5  # dt
 STEP_PRIORITIES = (0, 1, 1.5, 2, 3)
 
 
@@ -24,8 +26,11 @@ class NotSteppableError(Exception):
         msg (str): Error message supplied to the exception.
         args (tuple): Exception arguments containing the error message.
     '''
-    def __init__(self,
-                 msg: str = "Object must have step() method") -> None:
+
+    def __init__(
+        self,
+        msg: str = "Object must have step() method",
+    ) -> None:
         super().__init__(msg)
         self.msg: str = msg
 
@@ -38,12 +43,15 @@ class SimClock:
         step_ms (float): Default simulation step duration in ms.
         step_s (float): Step duration in seconds, computed at construction.
         time_ms (float): Current simulation time in ms.
-        _steppables (dict): Device sets grouped by update phase; order within a set is
+        _steppables (dict): Device sets grouped by update phase; order within a
+            set is
             unspecified.
-        _initialization (bool | str | None): None before setup, 'initializing' during
+        _initialization (bool | str | None): None before setup, 'initializing'
+            during
             init(), or True after success.
         steppables (tuple): Snapshot of registered devices in phase order.
     '''
+
     def __init__(self, step_ms: int = STEP_MS) -> None:
         '''
         Create a clock with fixed update phases.
@@ -56,7 +64,7 @@ class SimClock:
         self.step_s: float = step_ms / 1000.0
         self.time_ms: float = 0
 
-        # use dict of sets to store distinct steppable objects with different 
+        # use dict of sets to store distinct steppable objects with different
         # priorities.
         self._steppables: dict[float, set[Steppable]] = {
             priority: set() for priority in STEP_PRIORITIES
@@ -76,12 +84,14 @@ class SimClock:
         Register a device in its update phase without duplicates.
 
         Arg:
-            steppable (object): Hashable object with a callable step(dt_s) method.
+            steppable (object): Hashable object with a callable step(dt_s)
+                method.
         '''
         if not callable(getattr(steppable, "step", None)):
             raise NotSteppableError()
 
-        # A priority change takes effect only after removing and adding a device.
+        # A priority change takes effect only after removing and adding a
+        # device.
         if any(steppable in group for group in self._steppables.values()):
             return
         priority = getattr(steppable, 'step_priority', 0)
@@ -95,7 +105,8 @@ class SimClock:
         Remove a device from all update phases.
 
         Arg:
-            steppable (object): Registered device, or an absent device to ignore.
+            steppable (object): Registered device, or an absent device to
+                ignore.
         '''
         for group in self._steppables.values():
             group.discard(steppable)
@@ -124,7 +135,8 @@ class SimClock:
         '''
         Advance simulated time by a duration.
 
-        Use a shorter final step when the duration is not a multiple of step_ms.
+        Use a shorter final step when the duration is not a multiple of
+            step_ms.
 
         Arg:
             duration_ms (float): Non-negative duration in ms.
@@ -138,8 +150,12 @@ class SimClock:
             self._tick(this_step)
             remaining -= this_step
 
-    def advance_until(self, condition, timeout_ms: float | None = None,
-                      poll_step_ms: int | None = None) -> bool:
+    def advance_until(
+        self,
+        condition,
+        timeout_ms: float | None = None,
+        poll_step_ms: int | None = None,
+    ) -> bool:
         '''
         Advance simulated time until a condition becomes true or times out.
 
@@ -164,7 +180,8 @@ class SimClock:
         while not condition():
             if timeout_ms is not None and elapsed >= timeout_ms:
                 return False
-            dt_ms = step if timeout_ms is None else min(step, timeout_ms - elapsed)
+            dt_ms = step if timeout_ms is None else min(
+                step, timeout_ms - elapsed)
             self._tick(dt_ms)
             elapsed += dt_ms
         return True

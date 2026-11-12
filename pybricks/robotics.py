@@ -8,11 +8,11 @@ from sim.validation import boolean, number
 from .parameters import Stop
 from .pupdevices import Motor
 
-KP_DISTANCE = 3.0 # 1/s, feedback gain on distance error
-KP_ANGLE = 3.0 # 1/s, feedback gain on angle error
+KP_DISTANCE = 3.0  # 1/s, feedback gain on distance error
+KP_ANGLE = 3.0  # 1/s, feedback gain on angle error
 DISTANCE_TOL_MM = 1.0
 ANGLE_TOL_DEG = 0.5
-SETTLE_TIMEOUT_S = 3.0 # give up this long after the planned end of a move
+SETTLE_TIMEOUT_S = 3.0  # give up this long after the planned end of a move
 
 
 class _Profile:
@@ -28,6 +28,7 @@ class _Profile:
         t_cruise (float): Duration of constant-speed travel in seconds.
         duration (float): Total planned duration in seconds.
     '''
+
     def __init__(self, total: float, vmax: float, accel: float) -> None:
         '''
         Create a triangular or trapezoidal motion profile.
@@ -93,25 +94,36 @@ class DriveBase:
         _right (Motor): Motor driving the right wheel.
         _model (DriveBaseModel): Physical body model used for motion and sensor
             mounting.
-        _mm_per_deg (float): Wheel travel in mm per degree of gear output rotation.
+        _mm_per_deg (float): Wheel travel in mm per degree of gear output
+            rotation.
         _track (float): Distance between wheel contact points in mm.
         _use_gyro (bool): Whether heading feedback comes from the IMU.
         _straight_speed (float): Straight motion speed limit in mm/s.
         _straight_accel (float): Straight motion acceleration limit in mm/s/s.
         _turn_rate (float): Turn rate limit in deg/s.
         _turn_accel (float): Turn acceleration limit in deg/s/s.
-        _distance_offset (float): Offset subtracted from encoder distance, in mm.
-        _angle_offset (float): Offset subtracted from encoder heading, in degrees.
-        _maneuver (dict): Active move data: start values, profiles, stop mode and times;
+        _distance_offset (float): Offset subtracted from encoder distance, in
+            mm.
+        _angle_offset (float): Offset subtracted from encoder heading, in
+            degrees.
+        _maneuver (dict): Active move data: start values, profiles, stop mode
+            and times;
             None when inactive.
-        model (DriveBaseModel): Physical body model exposed for simulator setup.
+        model (DriveBaseModel): Physical body model exposed for simulator
+            setup.
         _distance (float): Reported encoder travel after the offset, in mm.
-        _angle (float): Reported clockwise heading from the selected feedback source.
+        _angle (float): Reported clockwise heading from the selected feedback
+            source.
     '''
     step_priority: int = 2
 
-    def __init__(self, left_motor: Motor, right_motor: Motor, wheel_diameter: float,
-                 axle_track: float) -> None:
+    def __init__(
+        self,
+        left_motor: Motor,
+        right_motor: Motor,
+        wheel_diameter: float,
+        axle_track: float,
+    ) -> None:
         '''
         Create a drive base from two wheel motors.
 
@@ -121,12 +133,14 @@ class DriveBase:
             wheel_diameter (float): Positive wheel diameter in mm.
             axle_track (float): Positive distance between wheel contacts in mm.
         '''
-        if not isinstance(left_motor, Motor) or not isinstance(right_motor, Motor):
+        if not isinstance(left_motor, Motor) or not isinstance(
+                right_motor, Motor):
             raise TypeError("left_motor and right_motor must be Motor objects")
         self._left: Motor = left_motor
         self._right: Motor = right_motor
 
-        # The body model validates the geometry and registers itself on the clock.
+        # The body model validates the geometry and registers itself on the
+        # clock.
         self._model: DriveBaseModel = DriveBaseModel(
             left_model=left_motor.model,
             right_model=right_motor.model,
@@ -194,7 +208,8 @@ class DriveBase:
         Stop the robot and select its heading feedback.
 
         Arg:
-            use_gyro (bool): Use IMU heading when True, or wheel odometry when False.
+            use_gyro (bool): Use IMU heading when True, or wheel odometry when
+                False.
         '''
         boolean(use_gyro, 'use_gyro')
         self.stop()
@@ -254,8 +269,10 @@ class DriveBase:
         w = math.radians(turn_rate_dps)
         v_left = speed_mm_s + w * self._track / 2.0
         v_right = speed_mm_s - w * self._track / 2.0
-        number(v_left / self._mm_per_deg * self._left.model.gear_ratio, 'left shaft speed')
-        number(v_right / self._mm_per_deg * self._right.model.gear_ratio, 'right shaft speed')
+        number(v_left / self._mm_per_deg
+               * self._left.model.gear_ratio, 'left shaft speed')
+        number(v_right / self._mm_per_deg
+               * self._right.model.gear_ratio, 'right shaft speed')
         self._left.run(v_left / self._mm_per_deg)
         self._right.run(v_right / self._mm_per_deg)
 
@@ -329,7 +346,12 @@ class DriveBase:
         self._apply_then(Stop.HOLD)
 
     @requires_init
-    def straight(self, distance: float, then: Stop = Stop.HOLD, wait: bool = True) -> None:
+    def straight(
+        self,
+        distance: float,
+        then: Stop = Stop.HOLD,
+        wait: bool = True,
+    ) -> None:
         '''
         Move along a straight line while holding the starting heading.
 
@@ -341,7 +363,12 @@ class DriveBase:
         self._start(distance, 0.0, then, wait)
 
     @requires_init
-    def turn(self, angle: float, then: Stop = Stop.HOLD, wait: bool = True) -> None:
+    def turn(
+        self,
+        angle: float,
+        then: Stop = Stop.HOLD,
+        wait: bool = True,
+    ) -> None:
         '''
         Turn in place while holding the starting distance.
 
@@ -421,8 +448,13 @@ class DriveBase:
         if self._use_gyro:
             self._model.imu.reset_heading(float(angle))
 
-    def settings(self, straight_speed: float | None = None, straight_acceleration: float | None = None,
-                 turn_rate: float | None = None, turn_acceleration: float | None = None) -> tuple[float, ...] | None:
+    def settings(
+        self,
+        straight_speed: float | None = None,
+        straight_acceleration: float | None = None,
+        turn_rate: float | None = None,
+        turn_acceleration: float | None = None,
+    ) -> tuple[float, ...] | None:
         '''
         Get or set positive motion limits.
 
@@ -430,19 +462,24 @@ class DriveBase:
 
         Arg:
             straight_speed (float | None): Maximum straight speed in mm/s.
-            straight_acceleration (float | None): Straight acceleration in mm/s/s.
+            straight_acceleration (float | None): Straight acceleration in
+                mm/s/s.
             turn_rate (float | None): Maximum clockwise turn rate in deg/s.
             turn_acceleration (float | None): Turn acceleration in deg/s/s.
 
         Returns:
-            tuple | None: Current limits without arguments, or None after an update.
+            tuple | None: Current limits without arguments, or None after an
+                update.
         '''
-        values = (straight_speed, straight_acceleration, turn_rate, turn_acceleration)
-        names = ('straight_speed', 'straight_acceleration', 'turn_rate', 'turn_acceleration')
+        values = (straight_speed, straight_acceleration,
+                  turn_rate, turn_acceleration)
+        names = ('straight_speed', 'straight_acceleration',
+                 'turn_rate', 'turn_acceleration')
         for name, value in zip(names, values):
             if value is not None:
                 number(value, name, positive=True)
-        if (straight_speed, straight_acceleration, turn_rate, turn_acceleration) == (None,) * 4:
+        if (straight_speed, straight_acceleration,
+                turn_rate, turn_acceleration) == (None,) * 4:
             return (self._straight_speed, self._straight_accel,
                     self._turn_rate, self._turn_accel)
         if straight_speed is not None:
@@ -458,14 +495,20 @@ class DriveBase:
     # Simulator-only helpers (not part of the official API).
     # They just forward to the body model.
     ##########################################################################
-    def place(self, x_mm: float, y_mm: float, heading_deg: float = 0.0) -> None:
+    def place(
+        self,
+        x_mm: float,
+        y_mm: float,
+        heading_deg: float = 0.0,
+    ) -> None:
         '''
         Place the simulated body without resetting encoder totals.
 
         Arg:
             x_mm (float): World x coordinate in mm.
             y_mm (float): World y coordinate in mm.
-            heading_deg (float): Counter-clockwise heading from the world x axis.
+            heading_deg (float): Counter-clockwise heading from the world x
+                axis.
         '''
         self._model.place(x_mm, y_mm, heading_deg)
 
@@ -474,11 +517,18 @@ class DriveBase:
         Return the true body pose in the world.
 
         Returns:
-            tuple: World x and y in mm, then counter-clockwise heading in degrees.
+            tuple: World x and y in mm, then counter-clockwise heading in
+                degrees.
         '''
         return self._model.pose()
 
-    def _start(self, distance: float, angle: float, then: Stop, wait: bool) -> None:
+    def _start(
+        self,
+        distance: float,
+        angle: float,
+        then: Stop,
+        wait: bool,
+    ) -> None:
         '''
         Start a maneuver with separate distance and angle profiles.
 
@@ -493,7 +543,8 @@ class DriveBase:
         boolean(wait, 'wait')
         # Hold the other axis at its starting value (straight keeps heading,
         # turn keeps position) by giving it a zero-length profile.
-        dist_profile = _Profile(distance, self._straight_speed, self._straight_accel)
+        dist_profile = _Profile(
+            distance, self._straight_speed, self._straight_accel)
         angle_profile = _Profile(angle, self._turn_rate, self._turn_accel)
         m = {
             'd0': self._distance,

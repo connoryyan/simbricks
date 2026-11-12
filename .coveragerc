@@ -1,6 +1,6 @@
 [run]
 branch = True
-source = sim, pybricks, world, maps, render, examples
+source = sim, pybricks, world, maps, render, examples, main
 
 [report]
 precision = 2

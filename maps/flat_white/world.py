@@ -11,11 +11,19 @@ class FlatWhiteWorld(World):
         bounds (tuple): Preview rectangle (xmin, ymin, xmax, ymax) in world mm.
         lines (list): Ground lines contributing to reflection readings.
         obstacles (list): Obstacle shapes tested by surface rays.
-        friction_coefficient (float): Uniform non-negative ground friction coefficient.
-        _friction_coefficient (float): Stored coefficient backing friction_coefficient.
+        friction_coefficient (float): Uniform non-negative ground friction
+            coefficient.
+        _friction_coefficient (float): Stored coefficient backing
+            friction_coefficient.
         _ambient_light (float): Stored ambient signal backing ambient_light.
     '''
-    def __init__(self, reflection: float = 85, *, ambient_light: float = 5.0) -> None:
+
+    def __init__(
+        self,
+        reflection: float = 85,
+        *,
+        ambient_light: float = 5.0,
+    ) -> None:
         '''
         Create a uniform white field without obstacles.
 

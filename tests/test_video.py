@@ -4,6 +4,9 @@ import pytest
 
 from maps.flat_white.world import FlatWhiteWorld
 from maps.line_follow.world import LineFollowWorld
+from pybricks.parameters import Port
+from pybricks.pupdevices import ForceSensor
+from pybricks.tools import wait
 from render import video
 from render.video import PoseRecorder, save_video
 from sim.clock import clock
@@ -25,6 +28,25 @@ def test_recorder_argument_validation(robot):
     with pytest.raises(ValueError):
         recorder.step(0)
     assert len(frames) == 1
+
+
+def test_recorder_samples_simulated_time_until_detached(robot):
+    frames = []
+    sensor = ForceSensor(Port.A)
+    robot.model.mount(sensor.model, forward_mm=75, above_mm=12)
+    recorder = PoseRecorder(robot, (sensor,), frames, clock)
+    clock.add_steppable(recorder)
+    robot.drive(100, 0)
+    wait(100)
+    assert len(frames) == 4
+    assert frames[0][0] == 0
+    assert frames[-1][0] == pytest.approx(0.1)
+    assert frames[-1][1] == robot.pose()
+    assert frames[-1][2] == (sensor.pose(),)
+    assert recorder.next_frame == 4
+    clock.remove_steppable(recorder)
+    wait(50)
+    assert len(frames) == 4
 
 
 def test_video_rejects_bad_arguments_before_encoding(monkeypatch):
@@ -67,8 +89,10 @@ def test_video_rejects_unsupported_geometry():
         Attributes:
             width_mm (float): Total line width in mm.
             reflection (float): Reflection from 0 to 100.
-            edge_width_mm (float): Width of the reflection blend at the line edge, in mm.
+            edge_width_mm (float): Width of the reflection blend at the line
+                edge, in mm.
         '''
+
         def distance_to(self, x, y):
             return 0
 
@@ -80,6 +104,7 @@ def test_video_rejects_unsupported_geometry():
         '''
         Provide a non-box obstacle for video format validation tests.
         '''
+
         def raycast(self, origin, direction, max_mm):
             return None
 
@@ -105,6 +130,7 @@ class InputStream:
         frames (int): Number of complete video frames written.
         closed (bool): Whether close() has been called.
     '''
+
     def __init__(self, fail=False):
         self.fail: bool = fail
         self.frames: int = 0
@@ -129,9 +155,11 @@ class Encoder:
         returncode (int): Exit code returned by wait().
         stdin (InputStream): Fake input stream receiving rendered video frames.
         stderr (BytesIO): Byte stream containing a simulated encoder error.
-        finished (bool): Whether wait() has marked the fake process as finished.
+        finished (bool): Whether wait() has marked the fake process as
+            finished.
         killed (bool): Whether kill() has been called.
     '''
+
     def __init__(self, returncode=0, fail=False):
         self.returncode: int = returncode
         self.stdin: InputStream = InputStream(fail)
@@ -175,7 +203,10 @@ def test_video_draws_frames_and_holds_final_frame(monkeypatch, tmp_path):
     assert not encoder.killed
 
 
-def test_video_rejects_missing_encoder_frames_and_wrong_fps(monkeypatch, tmp_path):
+def test_video_rejects_missing_encoder_frames_and_wrong_fps(
+    monkeypatch,
+    tmp_path,
+):
     field = LineFollowWorld()
     path = tmp_path / 'video.mp4'
     monkeypatch.setattr(video.shutil, 'which', lambda name: None)
@@ -191,18 +222,22 @@ def test_video_rejects_missing_encoder_frames_and_wrong_fps(monkeypatch, tmp_pat
 def test_video_reports_encoder_failure(monkeypatch, tmp_path):
     encoder = Encoder(returncode=1)
     monkeypatch.setattr(video.shutil, 'which', lambda name: 'ffmpeg')
-    monkeypatch.setattr(video.subprocess, 'Popen', lambda *args, **kwargs: encoder)
+    monkeypatch.setattr(video.subprocess, 'Popen',
+                        lambda *args, **kwargs: encoder)
     with pytest.raises(RuntimeError, match='encoder error'):
-        video.save_video(tmp_path / 'failed.mp4', LineFollowWorld(), [(0, (0, 0, 0), ())])
+        video.save_video(tmp_path / 'failed.mp4',
+                         LineFollowWorld(), [(0, (0, 0, 0), ())])
     assert encoder.stderr.closed
 
 
 def test_video_kills_encoder_when_pipe_breaks(monkeypatch, tmp_path):
     encoder = Encoder(fail=True)
     monkeypatch.setattr(video.shutil, 'which', lambda name: 'ffmpeg')
-    monkeypatch.setattr(video.subprocess, 'Popen', lambda *args, **kwargs: encoder)
+    monkeypatch.setattr(video.subprocess, 'Popen',
+                        lambda *args, **kwargs: encoder)
     with pytest.raises(BrokenPipeError):
-        video.save_video(tmp_path / 'failed.mp4', LineFollowWorld(), [(0, (0, 0, 0), ())])
+        video.save_video(tmp_path / 'failed.mp4',
+                         LineFollowWorld(), [(0, (0, 0, 0), ())])
     assert encoder.killed
     assert encoder.finished
     assert encoder.stderr.closed

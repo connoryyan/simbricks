@@ -3,13 +3,15 @@ from abc import ABC, abstractmethod
 from ..parameters import Port
 from sim.models.model import Model
 
+
 class Device(ABC):
     '''
     Represent a simulated electronic device.
 
     Attributes:
         port (Port): Port the device is connected to.
-        _model (Model | None): Simulator model, or None before a concrete device creates
+        _model (Model | None): Simulator model, or None before a concrete
+            device creates
             one.
     '''
 

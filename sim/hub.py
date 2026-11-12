@@ -15,13 +15,18 @@ class HubModel(Model):
 
     Attributes:
         step_priority (float): Clock update phase; smaller phases run first.
-        _time_constant_s (float): Stored device response time constant in seconds.
-        time_constant_s (float): Read-only device response time constant in seconds.
+        _time_constant_s (float): Stored device response time constant in
+            seconds.
+        time_constant_s (float): Read-only device response time constant in
+            seconds.
         imu (IMUModel): Shared IMU model used by hub and drive base interfaces.
-        body (DriveBaseModel | None): Drive base body supplying motion, or None for an
+        body (DriveBaseModel | None): Drive base body supplying motion, or None
+            for an
             idle hub.
-        pressed_buttons (set): Set of Button values currently pressed in the simulator.
+        pressed_buttons (set): Set of Button values currently pressed in the
+            simulator.
     '''
+
     def __init__(self) -> None:
         '''
         Create a shared hub with an idle IMU and no pressed buttons.
@@ -47,8 +52,11 @@ class HubModel(Model):
         from .models.drive_base_model import DriveBaseModel
         if not isinstance(body, DriveBaseModel):
             raise TypeError('body must be a DriveBaseModel')
-        if self.body is not None and self.body is not body and self.body in clock.steppables:
-            raise ValueError('One PrimeHub can only measure one active drive body')
+        if (self.body is not None
+                and self.body is not body
+                and self.body in clock.steppables):
+            raise ValueError(
+                'One PrimeHub can only measure one active drive body')
         if body._imu is not None and body._imu is not self.imu:
             clock.remove_steppable(self.imu)
             self.imu = body._imu
@@ -64,7 +72,9 @@ def get_active_hub() -> HubModel | None:
     '''
     Return the hub registered on the current clock, or None.
     '''
-    return next((item for item in clock.steppables if isinstance(item, HubModel)), None)
+    return next(
+        (item for item in clock.steppables if isinstance(item, HubModel)),
+        None)
 
 
 def get_hub() -> HubModel:
@@ -74,9 +84,11 @@ def get_hub() -> HubModel:
     hub = get_active_hub()
     if hub is None:
         from .models.drive_base_model import DriveBaseModel
-        bodies = [item for item in clock.steppables if isinstance(item, DriveBaseModel)]
+        bodies = [item for item in clock.steppables if isinstance(
+            item, DriveBaseModel)]
         if len(bodies) > 1:
-            raise ValueError('Create PrimeHub before creating multiple simulated bodies')
+            raise ValueError(
+                'Create PrimeHub before creating multiple simulated bodies')
         hub = HubModel()
         if bodies:
             hub.bind_body(bodies[0])

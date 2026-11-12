@@ -10,16 +10,24 @@ class Line(ABC):
     Attributes:
         width_mm (float): Total line width in mm.
         reflection (float): Reflection from 0 to 100.
-        edge_width_mm (float): Width of the reflection blend at the line edge, in mm.
+        edge_width_mm (float): Width of the reflection blend at the line edge,
+            in mm.
     '''
-    def __init__(self, width_mm: float = 20.0, reflection: float = 10, edge_width_mm: float = 4.0) -> None:
+
+    def __init__(
+        self,
+        width_mm: float = 20.0,
+        reflection: float = 10,
+        edge_width_mm: float = 4.0,
+    ) -> None:
         '''
         Create the shared ground line appearance.
 
         Arg:
             width_mm (float): Positive line width in mm.
             reflection (float): Line reflection from 0 to 100.
-            edge_width_mm (float): Positive edge blend width, no wider than the line.
+            edge_width_mm (float): Positive edge blend width, no wider than the
+                line.
         '''
         number(width_mm, 'width_mm', positive=True)
         number(edge_width_mm, 'edge_width_mm', positive=True)
@@ -43,9 +51,10 @@ class Line(ABC):
         '''
         number(background, 'background', minimum=0, maximum=100)
         distance = self.distance_to(x_mm, y_mm)
-        blend = (distance - self.width_mm/2 + self.edge_width_mm/2) / self.edge_width_mm
+        blend = (distance - self.width_mm / 2
+                 + self.edge_width_mm / 2) / self.edge_width_mm
         blend = max(0.0, min(1.0, blend))
-        return round(self.reflection + blend * (background-self.reflection))
+        return round(self.reflection + blend * (background - self.reflection))
 
     @abstractmethod
     def to_svg(self) -> str:
@@ -62,16 +71,26 @@ class Polyline(Line):
     Attributes:
         width_mm (float): Total line width in mm.
         reflection (float): Reflection from 0 to 100.
-        edge_width_mm (float): Width of the reflection blend at the line edge, in mm.
+        edge_width_mm (float): Width of the reflection blend at the line edge,
+            in mm.
         points (tuple): Connected (x, y) world points in mm.
-        _segments (list): Cached (x, y, dx, dy, squared_length) tuples for each segment.
+        _segments (list): Cached (x, y, dx, dy, squared_length) tuples for each
+            segment.
     '''
-    def __init__(self, points, width_mm: float = 20.0, reflection: float = 10, edge_width_mm: float = 4.0) -> None:
+
+    def __init__(
+        self,
+        points,
+        width_mm: float = 20.0,
+        reflection: float = 10,
+        edge_width_mm: float = 4.0,
+    ) -> None:
         '''
         Create a line from connected two-dimensional points.
 
         Arg:
-            points (list | tuple): At least two distinct neighboring points in mm.
+            points (list | tuple): At least two distinct neighboring points in
+                mm.
             width_mm (float): Positive line width in mm.
             reflection (float): Line reflection from 0 to 100.
             edge_width_mm (float): Positive edge blend width in mm.
@@ -80,11 +99,12 @@ class Polyline(Line):
         sequence(points, 'points')
         if len(points) < 2:
             raise ValueError('A line needs at least two points')
-        self.points: tuple[tuple[float, float], ...] = tuple(vector(point, 'point', 2) for point in points)
+        self.points: tuple[tuple[float, float], ...] = tuple(
+            vector(point, 'point', 2) for point in points)
         self._segments: list[tuple[float, float, float, float, float]] = []
         for (x, y), (end_x, end_y) in zip(self.points, self.points[1:]):
-            dx, dy = end_x-x, end_y-y
-            length_sq = dx*dx + dy*dy
+            dx, dy = end_x - x, end_y - y
+            length_sq = dx * dx + dy * dy
             number(length_sq, 'Segment squared length')
             if length_sq == 0:
                 raise ValueError("Consecutive line points must be different")
@@ -98,8 +118,11 @@ class Polyline(Line):
         number(y_mm, 'y_mm')
         nearest = math.inf
         for x, y, dx, dy, length_sq in self._segments:
-            t = max(0.0, min(1.0, ((x_mm-x)*dx + (y_mm-y)*dy) / length_sq))
-            nearest = min(nearest, (x_mm-x-t*dx)**2 + (y_mm-y-t*dy)**2)
+            t = max(0.0, min(
+                1.0, ((x_mm - x) * dx + (y_mm - y) * dy) / length_sq,
+            ))
+            nearest = min(nearest, (x_mm - x - t * dx)
+                          ** 2 + (y_mm - y - t * dy)**2)
         return math.sqrt(nearest)
 
     def to_svg(self) -> str:
@@ -108,5 +131,9 @@ class Polyline(Line):
         '''
         points = ' '.join(f'{x:.2f},{-y:.2f}' for x, y in self.points)
         shade = round(self.reflection * 255 / 100)
-        return (f'<polyline points="{points}" fill="none" stroke="rgb({shade},{shade},{shade})" '
-                f'stroke-width="{self.width_mm}" stroke-linejoin="round" stroke-linecap="round"/>')
+        return (
+            f'<polyline points="{points}" fill="none" '
+            f'stroke="rgb({shade},{shade},{shade})" '
+            f'stroke-width="{self.width_mm}" '
+            'stroke-linejoin="round" stroke-linecap="round"/>'
+        )

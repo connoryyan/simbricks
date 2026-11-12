@@ -21,7 +21,7 @@ def _effective_gear_ratio(gears: list | tuple | None) -> float:
         gears (list | tuple | None): Gear teeth in one or more chains.
 
     Returns:
-        float: Output gear teeth divided by input gear teeth across 
+        float: Output gear teeth divided by input gear teeth across
                all chains.
     '''
     if gears is None:
@@ -59,12 +59,16 @@ class Actuator(Device):
     Attributes:
         port (Port): Port the device is connected to.
         _model (MotorModel): Physical motor model storing raw shaft motion.
-        _direction (Direction): Direction treated as positive for motor commands and
+        _direction (Direction): Direction treated as positive for motor
+            commands and
             readings.
     '''
 
-    def __init__(self, port: Port,
-                 positive_direction: Direction = Direction.CLOCKWISE) -> None:
+    def __init__(
+        self,
+        port: Port,
+        positive_direction: Direction = Direction.CLOCKWISE,
+    ) -> None:
         '''
         Create a motor device and its physical model.
 
@@ -100,12 +104,16 @@ class DCMotor(Actuator):
     Attributes:
         port (Port): Port the device is connected to.
         _model (MotorModel): Physical motor model storing raw shaft motion.
-        _direction (Direction): Direction treated as positive for motor commands and
+        _direction (Direction): Direction treated as positive for motor
+            commands and
             readings.
     '''
 
-    def __init__(self, port: Port, 
-                 positive_direction: Direction = Direction.CLOCKWISE) -> None:
+    def __init__(
+        self,
+        port: Port,
+        positive_direction: Direction = Direction.CLOCKWISE,
+    ) -> None:
         '''
         Create a motor without angle feedback.
 
@@ -149,21 +157,27 @@ class Motor(DCMotor):
     Attributes:
         port (Port): Port the device is connected to.
         _model (MotorModel): Physical motor model storing raw shaft motion.
-        _direction (Direction): Direction treated as positive for motor commands and
+        _direction (Direction): Direction treated as positive for motor
+            commands and
             readings.
         _angle_offset (float): Reported output angle offset in degrees, set by
             reset_angle().
         _action (None): Reserved action state; currently unused and None.
-        _last_action_error (BaseException | None): Reserved action error; currently
+        _last_action_error (BaseException | None): Reserved action error;
+            currently
             unused and None.
         model (MotorModel): Simulator model exposed for setup and inspection.
-        positive_direction (Direction): Direction treated as positive at the gear
+        positive_direction (Direction): Direction treated as positive at the
+            gear
             output.
     '''
 
-    def __init__(self, port: Port,
-                 positive_direction: Direction = Direction.CLOCKWISE,
-                 gears: list | tuple | None = None) -> None:
+    def __init__(
+        self,
+        port: Port,
+        positive_direction: Direction = Direction.CLOCKWISE,
+        gears: list | tuple | None = None,
+    ) -> None:
         '''
         Create a motor with angles and speeds at the gear output.
 
@@ -208,8 +222,13 @@ class Motor(DCMotor):
         self._model.run(raw_speed)
 
     @requires_init
-    def run_time(self, speed: float, time: float, 
-                 then: Stop = Stop.HOLD, wait: bool = True) -> None:
+    def run_time(
+        self,
+        speed: float,
+        time: float,
+        then: Stop = Stop.HOLD,
+        wait: bool = True,
+    ) -> None:
         '''
         Run the gear output for a duration and apply a stop mode.
 
@@ -232,8 +251,13 @@ class Motor(DCMotor):
             self._apply_then(then)
 
     @requires_init
-    def run_angle(self, speed: float, angle: float, 
-                  then: Stop = Stop.HOLD, wait: bool = True) -> None:
+    def run_angle(
+        self,
+        speed: float,
+        angle: float,
+        then: Stop = Stop.HOLD,
+        wait: bool = True,
+    ) -> None:
         '''
         Run the motor through an angle.
 
@@ -241,7 +265,8 @@ class Motor(DCMotor):
             speed (float): Motor speed in deg/s.
             angle (float): Rotation angle in degrees.
             then (Stop): Stop mode after the move.
-            wait (bool): Wait for the move to finish. Automatic completion requires True.
+            wait (bool): Wait for the move to finish. Automatic completion
+                requires True.
         '''
         if not isinstance(then, Stop):
             raise TypeError('then must be a Stop')
@@ -274,14 +299,18 @@ class Motor(DCMotor):
 
             self._apply_then(then, target_physical=target)
 
-    def _apply_then(self, then: Stop,
-                    target_physical: float | None = None) -> None:
+    def _apply_then(
+        self,
+        then: Stop,
+        target_physical: float | None = None,
+    ) -> None:
         '''
         Apply the stop mode after a motor move.
 
         Arg:
             then (Stop): Stop mode to apply.
-            target_physical (float | None): Signed output target before the reset offset.
+            target_physical (float | None): Signed output target before the
+                reset offset.
                 Use the current motor angle when None.
         '''
         if not isinstance(then, Stop):
@@ -294,10 +323,9 @@ class Motor(DCMotor):
             self.stop()
         else:
             raw_target = (
-                None
-                if target_physical is None
-                else self._direction.value * target_physical * self._model.gear_ratio
-            )
+                None if target_physical is None else self._direction.value
+                * target_physical
+                * self._model.gear_ratio)
             self._model.hold(raw_target)
 
     def _physical_angle(self) -> float:
@@ -335,7 +363,7 @@ class Motor(DCMotor):
         '''
         number(angle, 'angle')
         self._angle_offset = self._physical_angle() - float(angle)
-    
+
     @requires_init
     def stalled(self) -> bool:
         '''
@@ -345,7 +373,8 @@ class Motor(DCMotor):
         It does not measure load or require a minimum stall duration.
 
         Returns:
-            bool: Whether target speed is non-zero and actual speed is near zero.
+            bool: Whether target speed is non-zero and actual speed is near
+                zero.
         '''
         return self._model.is_stalled()
 

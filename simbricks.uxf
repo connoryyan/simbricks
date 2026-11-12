@@ -1,0 +1,498 @@
+<diagram program="umletino" version="15.1"><zoom_level>9</zoom_level><element><id>UMLNote</id><coordinates><x>0</x><y>0</y><w>1944</w><h>63</h></coordinates><panel_attributes>SIMBRICKS | API and devices
+Class diagram of production code. Selected members; inherited members omitted.
+bg=#dcecf9</panel_attributes><additional_attributes></additional_attributes></element><element><id>UMLNote</id><coordinates><x>2106</x><y>0</y><w>1638</w><h>63</h></coordinates><panel_attributes>SIM | Physical models
+Model updates run before DriveBase control. Sensor readings query the active world.
+bg=#dff2e8</panel_attributes><additional_attributes></additional_attributes></element><element><id>UMLClass</id><coordinates><x>783</x><y>144</y><w>360</w><h>135</h></coordinates><panel_attributes>&lt;&lt;pybricks.pupdevices.device&gt;&gt;
+Device
+{inherits ABC}
+--
++port: Port
+-_model: Model | None
+--
+bg=#e8f2fb</panel_attributes><additional_attributes></additional_attributes></element><element><id>UMLClass</id><coordinates><x>63</x><y>369</y><w>360</w><h>153</h></coordinates><panel_attributes>&lt;&lt;pybricks.pupdevices.actuator&gt;&gt;
+/Actuator/
+--
+-_model: MotorModel
+-_direction: Direction
+--
+/+stop(): None/
+/+brake(): None/
+bg=#e8f2fb</panel_attributes><additional_attributes></additional_attributes></element><element><id>UMLClass</id><coordinates><x>63</x><y>630</y><w>360</w><h>135</h></coordinates><panel_attributes>&lt;&lt;pybricks.pupdevices.actuator&gt;&gt;
+DCMotor
+--
+--
++dc(duty): None
++stop(): None
++brake(): None
+bg=#e8f2fb</panel_attributes><additional_attributes></additional_attributes></element><element><id>UMLClass</id><coordinates><x>63</x><y>891</y><w>360</w><h>252</h></coordinates><panel_attributes>&lt;&lt;pybricks.pupdevices.actuator&gt;&gt;
+Motor
+--
++model: MotorModel
++positive_direction: Direction
+--
++run(speed): None
++run_time(speed, time, then, wait): None
++run_angle(speed, angle, then, wait): None
++angle(): float
++speed(): float
++reset_angle(angle): None
++stalled(): bool
++hold(): None
+bg=#e8f2fb</panel_attributes><additional_attributes></additional_attributes></element><element><id>UMLClass</id><coordinates><x>828</x><y>369</y><w>360</w><h>153</h></coordinates><panel_attributes>&lt;&lt;pybricks.pupdevices.sensor&gt;&gt;
+Sensor
+--
++model: SensorModel
+--
++set_pose(x_mm, y_mm, z_mm, yaw_deg): None
++set_tilt(pitch_deg, roll_deg): None
++pose(): tuple
+bg=#e8f2fb</panel_attributes><additional_attributes></additional_attributes></element><element><id>UMLClass</id><coordinates><x>468</x><y>711</y><w>360</w><h>153</h></coordinates><panel_attributes>&lt;&lt;pybricks.pupdevices.sensor&gt;&gt;
+ColorSensor
+--
+--
++reflection(): int
++ambient(): int
++color(): Color | None
++hsv(): tuple
+bg=#e8f2fb</panel_attributes><additional_attributes></additional_attributes></element><element><id>UMLClass</id><coordinates><x>873</x><y>711</y><w>360</w><h>108</h></coordinates><panel_attributes>&lt;&lt;pybricks.pupdevices.sensor&gt;&gt;
+UltrasonicSensor
+--
+--
++distance(): int
+bg=#e8f2fb</panel_attributes><additional_attributes></additional_attributes></element><element><id>UMLClass</id><coordinates><x>1278</x><y>711</y><w>360</w><h>153</h></coordinates><panel_attributes>&lt;&lt;pybricks.pupdevices.sensor&gt;&gt;
+ForceSensor
+--
+--
++force(): float
++distance(): float
++pressed(force): bool
++touched(): bool
+bg=#e8f2fb</panel_attributes><additional_attributes></additional_attributes></element><element><id>UMLClass</id><coordinates><x>1548</x><y>144</y><w>396</w><h>432</h></coordinates><panel_attributes>&lt;&lt;pybricks.robotics&gt;&gt;
+DriveBase
+--
+-_left, _right: Motor
+-_model: DriveBaseModel
+-_maneuver: dict | None
+-_use_gyro: bool
+--
++drive(speed, turn_rate): None
++straight(distance, then, wait): None
++turn(angle, then, wait): None
++stop(): None
++brake(): None
++hold(): None
++use_gyro(use_gyro): None
++distance(): float
++angle(): float
++state(): tuple
++reset(distance, angle): None
++settings(...): tuple[float, ...] | None
++place(x_mm, y_mm, heading_deg): None
++pose(): tuple
++done(): bool
++stalled(): bool
++step(dt_s): None
+bg=#e8f2fb</panel_attributes><additional_attributes></additional_attributes></element><element><id>UMLClass</id><coordinates><x>1548</x><y>1035</y><w>396</w><h>171</h></coordinates><panel_attributes>&lt;&lt;pybricks.robotics&gt;&gt;
+_Profile
+--
++dist, accel, v_peak: float
++duration: float
+--
++at(t): tuple[float, float]
+bg=#e8f2fb</panel_attributes><additional_attributes></additional_attributes></element><element><id>UMLClass</id><coordinates><x>513</x><y>1044</y><w>360</w><h>153</h></coordinates><panel_attributes>&lt;&lt;pybricks.hubs&gt;&gt;
+PrimeHub
+{InventorHub = PrimeHub}
+--
+-_model: HubModel
++imu: IMU
++buttons: _Buttons
+--
+bg=#e8f2fb</panel_attributes><additional_attributes></additional_attributes></element><element><id>UMLClass</id><coordinates><x>963</x><y>1044</y><w>432</w><h>297</h></coordinates><panel_attributes>&lt;&lt;pybricks.pupdevices.sensor&gt;&gt;
+IMU
+--
++model: IMUModel
+--
++heading(): float
++reset_heading(angle): None
++tilt(calibrated): tuple[int, int]
++pitch(): int
++roll(): int
++up(calibrated): Side
++angular_velocity(axis, calibrated): object
++rotation(axis, calibrated): float
++acceleration(axis, calibrated): object
++ready(): bool
++stationary(): bool
++settings(...): tuple[float, ...] | None
+bg=#e8f2fb</panel_attributes><additional_attributes></additional_attributes></element><element><id>UMLClass</id><coordinates><x>513</x><y>1323</y><w>360</w><h>126</h></coordinates><panel_attributes>&lt;&lt;pybricks.hubs&gt;&gt;
+_Buttons
+--
+-_model: HubModel
+--
++pressed(): set[Button]
+bg=#e8f2fb</panel_attributes><additional_attributes></additional_attributes></element><element><id>UMLClass</id><coordinates><x>2835</x><y>144</y><w>360</w><h>135</h></coordinates><panel_attributes>&lt;&lt;sim.models.model&gt;&gt;
+/Model/
+--
++step_priority: float
+-_time_constant_s: float
+--
+/+step(dt_s): None/
+bg=#e8f6ee</panel_attributes><additional_attributes></additional_attributes></element><element><id>UMLClass</id><coordinates><x>2106</x><y>432</y><w>414</w><h>333</h></coordinates><panel_attributes>&lt;&lt;sim.models.drive_base_model&gt;&gt;
+DriveBaseModel
+--
+-_left, _right: MotorModel
+-_imu: IMUModel | None
+-_mounts: dict[SensorModel, dict]
++x_mm, y_mm, heading_rad: float
++friction_enabled: bool
+--
++step(dt_s): None
++configure_friction(...): None
++mount(...): None
++place(x_mm, y_mm, heading_deg): None
++pose(): tuple
++speed_mm_s(): float
++turn_rate_dps(): float
++velocity_mm_s(): tuple[float, float]
++acceleration_mm_s2(): tuple[float, float]
++detach(): None
+bg=#e8f6ee</panel_attributes><additional_attributes></additional_attributes></element><element><id>UMLClass</id><coordinates><x>2601</x><y>432</y><w>387</w><h>234</h></coordinates><panel_attributes>&lt;&lt;sim.models.motor_model&gt;&gt;
+MotorModel
+--
++gear_ratio: float
++output_angle, output_speed: float
+-_hold_angle_deg: float | None
+--
++step(dt_s): None
++run(speed_dps): None
++stop(): None
++brake(): None
++hold(angle_deg): None
++is_stalled(speed_threshold_dps): bool
+bg=#e8f6ee</panel_attributes><additional_attributes></additional_attributes></element><element><id>UMLClass</id><coordinates><x>3060</x><y>432</y><w>387</w><h>270</h></coordinates><panel_attributes>&lt;&lt;sim.models.imu_model&gt;&gt;
+IMUModel
+--
++step_priority: float = 1.5
++body: DriveBaseModel | None
++bias_dps, noise_dps: float
++raw_rate, calibrated_rate: float
++in_use: bool
+--
++step(dt_s): None
++heading(): float
++reset_heading(angle): None
++rebase_pose(): None
++ready(): bool
++stationary(): bool
+bg=#e8f6ee</panel_attributes><additional_attributes></additional_attributes></element><element><id>UMLClass</id><coordinates><x>3519</x><y>432</y><w>387</w><h>171</h></coordinates><panel_attributes>&lt;&lt;sim.hub&gt;&gt;
+HubModel
+--
++imu: IMUModel
++body: DriveBaseModel | None
++pressed_buttons: set[Button]
+--
++step(dt_s): None
++bind_body(body): None
+bg=#e8f6ee</panel_attributes><additional_attributes></additional_attributes></element><element><id>UMLClass</id><coordinates><x>2628</x><y>963</y><w>423</w><h>234</h></coordinates><panel_attributes>&lt;&lt;sim.models.sensor_model&gt;&gt;
+SensorModel
+--
+-_x_mm, _y_mm, _z_mm: float
+-_yaw_deg, _pitch_deg, _roll_deg: float
+-_noise_std: float
++world: World
+--
++step(dt_s): None
++set_pose(x_mm, y_mm, z_mm, yaw_deg): None
++set_tilt(pitch_deg, roll_deg): None
++pose(): tuple
++view_direction(): tuple
+bg=#e8f6ee</panel_attributes><additional_attributes></additional_attributes></element><element><id>UMLClass</id><coordinates><x>2142</x><y>1395</y><w>423</w><h>126</h></coordinates><panel_attributes>&lt;&lt;sim.models.sensor_model&gt;&gt;
+ColorSensorModel
+--
+--
++reflection(): int
++ambient(): int
+bg=#e8f6ee</panel_attributes><additional_attributes></additional_attributes></element><element><id>UMLClass</id><coordinates><x>2628</x><y>1395</y><w>423</w><h>108</h></coordinates><panel_attributes>&lt;&lt;sim.models.sensor_model&gt;&gt;
+UltrasonicSensorModel
+--
+--
++distance(): int
+bg=#e8f6ee</panel_attributes><additional_attributes></additional_attributes></element><element><id>UMLClass</id><coordinates><x>3114</x><y>1395</y><w>423</w><h>108</h></coordinates><panel_attributes>&lt;&lt;sim.models.sensor_model&gt;&gt;
+ForceSensorModel
+--
+--
++set_measurement(force_n, distance_mm): None
+bg=#e8f6ee</panel_attributes><additional_attributes></additional_attributes></element><element><id>UMLNote</id><coordinates><x>0</x><y>1701</y><w>1944</w><h>63</h></coordinates><panel_attributes>WORLD and MAPS | Geometry, appearance and friction
+World holds lines and obstacles; rays return SurfaceHit. Map classes inherit World.
+bg=#faedcf</panel_attributes><additional_attributes></additional_attributes></element><element><id>UMLClass</id><coordinates><x>18</x><y>1836</y><w>423</w><h>333</h></coordinates><panel_attributes>&lt;&lt;world.world&gt;&gt;
+/World/
+--
++lines: list[Line]
++obstacles: list[Obstacle]
++bounds: tuple
++reflection: float
++ambient_light: float
++friction_coefficient: float
++preview_error: OSError | None
+--
++get_reflection_at(x_mm, y_mm): int
++get_ambient_at(x_mm, y_mm, z_mm): float
++get_friction_at(x_mm, y_mm): float
++raycast_surface(x_mm, y_mm, z_mm, dx, dy, dz, max_mm): SurfaceHit | None
++raycast_distance(...): float
++add_line(line): None
++add_obstacle(obstacle): None
++save_preview(path, trace): bool
+bg=#fff5de</panel_attributes><additional_attributes></additional_attributes></element><element><id>UMLClass</id><coordinates><x>585</x><y>1836</y><w>360</w><h>189</h></coordinates><panel_attributes>&lt;&lt;world.line&gt;&gt;
+/Line/
+--
++width_mm: float
++reflection: float
++edge_width_mm: float
+--
+/+distance_to(x_mm, y_mm): float/
++get_reflection_at(x_mm, y_mm, background): float
+/+to_svg(): str/
+bg=#fff5de</panel_attributes><additional_attributes></additional_attributes></element><element><id>UMLClass</id><coordinates><x>1062</x><y>1836</y><w>360</w><h>126</h></coordinates><panel_attributes>&lt;&lt;world.obstacle&gt;&gt;
+/Obstacle/
+--
+--
+/+raycast(origin, direction, max_mm): SurfaceHit | None/
+/+to_svg(): str/
+bg=#fff5de</panel_attributes><additional_attributes></additional_attributes></element><element><id>UMLClass</id><coordinates><x>1548</x><y>1836</y><w>396</w><h>153</h></coordinates><panel_attributes>&lt;&lt;world.surface&gt;&gt;
+SurfaceHit
+--
++x_mm, y_mm, z_mm: float
++distance_mm: float
++reflection: float
++incidence_cosine: float
+--
+bg=#fff5de</panel_attributes><additional_attributes></additional_attributes></element><element><id>UMLClass</id><coordinates><x>585</x><y>2214</y><w>360</w><h>135</h></coordinates><panel_attributes>&lt;&lt;world.line&gt;&gt;
+Polyline
+--
++points: tuple
+--
++distance_to(x_mm, y_mm): float
++to_svg(): str
+bg=#fff5de</panel_attributes><additional_attributes></additional_attributes></element><element><id>UMLClass</id><coordinates><x>1062</x><y>2214</y><w>360</w><h>171</h></coordinates><panel_attributes>&lt;&lt;world.obstacle&gt;&gt;
+BoxObstacle
+--
++xmin, ymin, xmax, ymax: float
++height_mm: float
++reflection: float
+--
++raycast(origin, direction, max_mm): SurfaceHit | None
++to_svg(): str
+bg=#fff5de</panel_attributes><additional_attributes></additional_attributes></element><element><id>UMLClass</id><coordinates><x>0</x><y>2673</y><w>360</w><h>90</h></coordinates><panel_attributes>&lt;&lt;maps.flat_white.world&gt;&gt;
+FlatWhiteWorld
+--
+--
+bg=#fff5de</panel_attributes><additional_attributes></additional_attributes></element><element><id>UMLClass</id><coordinates><x>405</x><y>2673</y><w>360</w><h>90</h></coordinates><panel_attributes>&lt;&lt;maps.straight_line.world&gt;&gt;
+LineWorld
+--
+--
+bg=#fff5de</panel_attributes><additional_attributes></additional_attributes></element><element><id>UMLClass</id><coordinates><x>810</x><y>2673</y><w>360</w><h>108</h></coordinates><panel_attributes>&lt;&lt;maps.line_follow.world&gt;&gt;
+LineFollowWorld
+--
+--
++distance_to_line(x_mm, y_mm): float
+bg=#fff5de</panel_attributes><additional_attributes></additional_attributes></element><element><id>UMLClass</id><coordinates><x>1215</x><y>2673</y><w>360</w><h>90</h></coordinates><panel_attributes>&lt;&lt;maps.force_contact.world&gt;&gt;
+ForceContactWorld
+--
+--
+bg=#fff5de</panel_attributes><additional_attributes></additional_attributes></element><element><id>UMLClass</id><coordinates><x>1620</x><y>2673</y><w>360</w><h>153</h></coordinates><panel_attributes>&lt;&lt;maps.scriptable.world&gt;&gt;
+ScriptableWorld
+--
+--
++set_reflection(value): None
++set_distance(value_mm): None
++get_reflection_at(x_mm, y_mm): int
++raycast_distance(...): float
+bg=#fff5de</panel_attributes><additional_attributes></additional_attributes></element><element><id>UMLNote</id><coordinates><x>2106</x><y>1701</y><w>1800</w><h>63</h></coordinates><panel_attributes>RUNTIME and SUPPORT | Initialization, clock and parameters
++ public; - private; italic abstract; triangle points to base; dashed arrow is a dependency.
+bg=#eee5fa</panel_attributes><additional_attributes></additional_attributes></element><element><id>UMLClass</id><coordinates><x>2106</x><y>1845</y><w>450</w><h>216</h></coordinates><panel_attributes>&lt;&lt;sim.clock&gt;&gt;
+SimClock
+--
++time_ms, step_ms, step_s: float
+-_steppables: dict[float, set]
+-_initialization: bool | str | None
++steppables: tuple[Steppable, ...]
+--
++add_steppable(steppable): None
++remove_steppable(steppable): None
++advance_ms(duration_ms): None
++advance_until(condition, timeout_ms, poll_step_ms): bool
+bg=#f5effc</panel_attributes><additional_attributes></additional_attributes></element><element><id>UMLClass</id><coordinates><x>2673</x><y>1845</y><w>324</w><h>108</h></coordinates><panel_attributes>&lt;&lt;protocol; TYPE_CHECKING only&gt;&gt;
+Steppable
+--
+--
++step(dt_s): None
+bg=#f5effc</panel_attributes><additional_attributes></additional_attributes></element><element><id>UMLClass</id><coordinates><x>3114</x><y>1845</y><w>792</w><h>216</h></coordinates><panel_attributes>&lt;&lt;module&gt;&gt;
+sim.initialization
+--
++initialize(init, *args, **kwargs)
++run(init, main)
++require_initialized()
++requires_init(function)
+--
+init must be callable and named init.
+Missing setup raises NotInitializedError.
+bg=#f5effc</panel_attributes><additional_attributes></additional_attributes></element><element><id>UMLClass</id><coordinates><x>2106</x><y>2277</y><w>405</w><h>126</h></coordinates><panel_attributes>&lt;&lt;sim.clock&gt;&gt;
+NotSteppableError
+{extends Exception}
+--
++msg: str
+--
+bg=#f5effc</panel_attributes><additional_attributes></additional_attributes></element><element><id>UMLClass</id><coordinates><x>2610</x><y>2277</y><w>405</w><h>108</h></coordinates><panel_attributes>&lt;&lt;sim.initialization&gt;&gt;
+NotInitializedError
+{extends RuntimeError}
+--
+--
+bg=#f5effc</panel_attributes><additional_attributes></additional_attributes></element><element><id>UMLClass</id><coordinates><x>3114</x><y>2205</y><w>360</w><h>153</h></coordinates><panel_attributes>&lt;&lt;pybricks.tools&gt;&gt;
+StopWatch
+--
+--
++time(): int
++pause(): None
++resume(): None
++reset(): None
+bg=#f5effc</panel_attributes><additional_attributes></additional_attributes></element><element><id>UMLClass</id><coordinates><x>3519</x><y>2205</y><w>387</w><h>153</h></coordinates><panel_attributes>&lt;&lt;examples.force_contact.force_contact&gt;&gt;
+BumperContact
+--
++sensor: ForceSensor
++obstacle: BoxObstacle
++step_priority: int = 2
+--
++step(dt_s): None
+bg=#f5effc</panel_attributes><additional_attributes></additional_attributes></element><element><id>UMLClass</id><coordinates><x>2106</x><y>2664</y><w>270</w><h>153</h></coordinates><panel_attributes>&lt;&lt;enumeration&gt;&gt;
+Port
+--
+A
+B
+C
+D
+E
+F
+bg=#f5effc</panel_attributes><additional_attributes></additional_attributes></element><element><id>UMLClass</id><coordinates><x>2412</x><y>2664</y><w>270</w><h>90</h></coordinates><panel_attributes>&lt;&lt;enumeration&gt;&gt;
+Direction
+--
+CLOCKWISE
+COUNTERCLOCKWISE
+bg=#f5effc</panel_attributes><additional_attributes></additional_attributes></element><element><id>UMLClass</id><coordinates><x>2718</x><y>2664</y><w>270</w><h>108</h></coordinates><panel_attributes>&lt;&lt;enumeration&gt;&gt;
+Axis
+--
+X
+Y
+Z
+bg=#f5effc</panel_attributes><additional_attributes></additional_attributes></element><element><id>UMLClass</id><coordinates><x>3024</x><y>2664</y><w>270</w><h>126</h></coordinates><panel_attributes>&lt;&lt;enumeration&gt;&gt;
+Stop
+--
+COAST
+BRAKE
+HOLD
+COAST_SMART
+bg=#f5effc</panel_attributes><additional_attributes></additional_attributes></element><element><id>UMLClass</id><coordinates><x>3330</x><y>2664</y><w>270</w><h>189</h></coordinates><panel_attributes>&lt;&lt;enumeration&gt;&gt;
+Button
+--
+LEFT
+RIGHT
+CENTER
+BLUETOOTH
+LEFT_PLUS
+LEFT_MINUS
+RIGHT_PLUS
+RIGHT_MINUS
+bg=#f5effc</panel_attributes><additional_attributes></additional_attributes></element><element><id>UMLClass</id><coordinates><x>3636</x><y>2664</y><w>270</w><h>153</h></coordinates><panel_attributes>&lt;&lt;enumeration&gt;&gt;
+Side
+--
+TOP
+BOTTOM
+FRONT
+BACK
+LEFT
+RIGHT
+bg=#f5effc</panel_attributes><additional_attributes></additional_attributes></element><element><id>UMLClass</id><coordinates><x>2106</x><y>3024</y><w>360</w><h>171</h></coordinates><panel_attributes>&lt;&lt;pybricks.parameters&gt;&gt;
+Color
+--
++h, s, v: float
+_+BLACK, WHITE, RED: Color_
+_+GREEN, BLUE: Color_
+_+NONE: None_
+--
+-__repr__(): str
+bg=#f5effc</panel_attributes><additional_attributes></additional_attributes></element><element><id>UMLClass</id><coordinates><x>2610</x><y>3024</y><w>585</w><h>135</h></coordinates><panel_attributes>&lt;&lt;module&gt;&gt;
+sim.validation
+--
++number(), boolean(), integer()
++sequence(), vector(), unit_vector()
+bg=#f5effc</panel_attributes><additional_attributes></additional_attributes></element><element><id>UMLClass</id><coordinates><x>3303</x><y>3024</y><w>603</w><h>135</h></coordinates><panel_attributes>&lt;&lt;module&gt;&gt;
+world
+--
++current_world: World | None
++get_current_world(): World
+bg=#fff5de</panel_attributes><additional_attributes></additional_attributes></element><element><id>UMLNote</id><coordinates><x>0</x><y>3078</y><w>1944</w><h>153</h></coordinates><panel_attributes>Reading notes
+Class boxes show selected members, including cross-package reference types.
+InventorHub is an alias, not a subclass. IMU is not a Sensor subclass.
+Model and DriveBase both register with the clock; registration is based on callable step().
+Steppable is a type-checking protocol, not a runtime requirement.
+The active world is read dynamically. Mounts store SensorModel objects.
+Includes the example BumperContact adapter. Tests are outside this diagram.
+bg=#f4f6f8</panel_attributes><additional_attributes></additional_attributes></element><element><id>UMLNote</id><coordinates><x>1458</x><y>1341</y><w>486</w><h>117</h></coordinates><panel_attributes>Clock phases
+0: motors, sensors, hub
+1: drive body
+1.5: IMU integration
+2: DriveBase control / contact adapter
+bg=#eef2f6</panel_attributes><additional_attributes></additional_attributes></element><element><id>Relation</id><coordinates><x>234</x><y>270</y><w>747</w><h>117</h></coordinates><panel_attributes>lt=&lt;&lt;-
+fg=#5b6570</panel_attributes><additional_attributes>810;10;810;60;10;60;10;110</additional_attributes></element><element><id>Relation</id><coordinates><x>954</x><y>270</y><w>72</w><h>117</h></coordinates><panel_attributes>lt=&lt;&lt;-
+fg=#5b6570</panel_attributes><additional_attributes>10;10;10;60;60;60;60;110</additional_attributes></element><element><id>Relation</id><coordinates><x>234</x><y>513</y><w>27</w><h>135</h></coordinates><panel_attributes>lt=&lt;&lt;-
+fg=#5b6570</panel_attributes><additional_attributes>10;10;10;80;10;80;10;130</additional_attributes></element><element><id>Relation</id><coordinates><x>234</x><y>756</y><w>27</w><h>153</h></coordinates><panel_attributes>lt=&lt;&lt;-
+fg=#5b6570</panel_attributes><additional_attributes>10;10;10;110;10;110;10;150</additional_attributes></element><element><id>Relation</id><coordinates><x>639</x><y>513</y><w>387</w><h>216</h></coordinates><panel_attributes>lt=&lt;&lt;-
+fg=#5b6570</panel_attributes><additional_attributes>410;10;410;160;10;160;10;220</additional_attributes></element><element><id>Relation</id><coordinates><x>999</x><y>513</y><w>72</w><h>216</h></coordinates><panel_attributes>lt=&lt;&lt;-
+fg=#5b6570</panel_attributes><additional_attributes>10;10;10;160;60;160;60;220</additional_attributes></element><element><id>Relation</id><coordinates><x>999</x><y>513</y><w>477</w><h>216</h></coordinates><panel_attributes>lt=&lt;&lt;-
+fg=#5b6570</panel_attributes><additional_attributes>10;10;10;160;510;160;510;220</additional_attributes></element><element><id>Relation</id><coordinates><x>2304</x><y>270</y><w>729</w><h>180</h></coordinates><panel_attributes>lt=&lt;&lt;-
+fg=#5b6570</panel_attributes><additional_attributes>790;10;790;110;10;110;10;180</additional_attributes></element><element><id>Relation</id><coordinates><x>2781</x><y>270</y><w>252</w><h>180</h></coordinates><panel_attributes>lt=&lt;&lt;-
+fg=#5b6570</panel_attributes><additional_attributes>255;10;255;110;10;110;10;180</additional_attributes></element><element><id>Relation</id><coordinates><x>3006</x><y>270</y><w>270</w><h>180</h></coordinates><panel_attributes>lt=&lt;&lt;-
+fg=#5b6570</panel_attributes><additional_attributes>10;10;10;110;275;110;275;180</additional_attributes></element><element><id>Relation</id><coordinates><x>3006</x><y>270</y><w>729</w><h>180</h></coordinates><panel_attributes>lt=&lt;&lt;-
+fg=#5b6570</panel_attributes><additional_attributes>10;10;10;110;785;110;785;180</additional_attributes></element><element><id>Relation</id><coordinates><x>2340</x><y>1188</y><w>513</w><h>225</h></coordinates><panel_attributes>lt=&lt;&lt;-
+fg=#5b6570</panel_attributes><additional_attributes>550;10;550;170;10;170;10;230</additional_attributes></element><element><id>Relation</id><coordinates><x>2826</x><y>1188</y><w>27</w><h>225</h></coordinates><panel_attributes>lt=&lt;&lt;-
+fg=#5b6570</panel_attributes><additional_attributes>10;10;10;170;10;170;10;230</additional_attributes></element><element><id>Relation</id><coordinates><x>2826</x><y>1188</y><w>513</w><h>225</h></coordinates><panel_attributes>lt=&lt;&lt;-
+fg=#5b6570</panel_attributes><additional_attributes>10;10;10;170;550;170;550;230</additional_attributes></element><element><id>Relation</id><coordinates><x>756</x><y>2016</y><w>27</w><h>216</h></coordinates><panel_attributes>lt=&lt;&lt;-
+fg=#5b6570</panel_attributes><additional_attributes>10;10;10;150;10;150;10;220</additional_attributes></element><element><id>Relation</id><coordinates><x>1233</x><y>1953</y><w>27</w><h>279</h></coordinates><panel_attributes>lt=&lt;&lt;-
+fg=#5b6570</panel_attributes><additional_attributes>10;10;10;220;10;220;10;290</additional_attributes></element><element><id>Relation</id><coordinates><x>2025</x><y>270</y><w>855</w><h>711</h></coordinates><panel_attributes>lt=&lt;&lt;-
+fg=#5b6570</panel_attributes><additional_attributes>930;10;930;60;10;60;10;700;905;700;905;770</additional_attributes></element><element><id>Relation</id><coordinates><x>171</x><y>2160</y><w>81</w><h>531</h></coordinates><panel_attributes>lt=&lt;&lt;-
+fg=#5b6570</panel_attributes><additional_attributes>65;10;65;450;10;450;10;570</additional_attributes></element><element><id>Relation</id><coordinates><x>216</x><y>2160</y><w>387</w><h>531</h></coordinates><panel_attributes>lt=&lt;&lt;-
+fg=#5b6570</panel_attributes><additional_attributes>10;10;10;450;405;450;405;570</additional_attributes></element><element><id>Relation</id><coordinates><x>216</x><y>2160</y><w>792</w><h>531</h></coordinates><panel_attributes>lt=&lt;&lt;-
+fg=#5b6570</panel_attributes><additional_attributes>10;10;10;450;855;450;855;570</additional_attributes></element><element><id>Relation</id><coordinates><x>216</x><y>2160</y><w>1197</w><h>531</h></coordinates><panel_attributes>lt=&lt;&lt;-
+fg=#5b6570</panel_attributes><additional_attributes>10;10;10;450;1305;450;1305;570</additional_attributes></element><element><id>Relation</id><coordinates><x>216</x><y>2160</y><w>1602</w><h>531</h></coordinates><panel_attributes>lt=&lt;&lt;-
+fg=#5b6570</panel_attributes><additional_attributes>10;10;10;450;1755;450;1755;570</additional_attributes></element><element><id>Relation</id><coordinates><x>1935</x><y>243</y><w>189</w><h>315</h></coordinates><panel_attributes>lt=-&gt;
+model
+fg=#5b6570</panel_attributes><additional_attributes>10;10;100;10;100;330;190;330</additional_attributes></element><element><id>Relation</id><coordinates><x>2511</x><y>495</y><w>108</w><h>36</h></coordinates><panel_attributes>lt=-&gt;
+left / right (2)
+fg=#5b6570</panel_attributes><additional_attributes>10;20;55;20;55;20;100;20</additional_attributes></element><element><id>Relation</id><coordinates><x>864</x><y>1098</y><w>117</w><h>36</h></coordinates><panel_attributes>lt=-&gt;
+imu
+fg=#5b6570</panel_attributes><additional_attributes>10;20;60;20;60;20;110;20</additional_attributes></element><element><id>Relation</id><coordinates><x>2547</x><y>1890</y><w>144</w><h>36</h></coordinates><panel_attributes>lt=-&gt;
+updates 0..*
+fg=#5b6570</panel_attributes><additional_attributes>10;20;75;20;75;20;140;20</additional_attributes></element><element><id>Relation</id><coordinates><x>3240</x><y>387</y><w>486</w><h>63</h></coordinates><panel_attributes>lt=-&gt;
+imu
+fg=#5b6570</panel_attributes><additional_attributes>520;50;520;20;10;20;10;50</additional_attributes></element><element><id>Relation</id><coordinates><x>432</x><y>1908</y><w>171</w><h>36</h></coordinates><panel_attributes>lt=&lt;&lt;&lt;&lt;-
+lines 0..*
+fg=#5b6570</panel_attributes><additional_attributes>10;20;170;20</additional_attributes></element><element><id>Relation</id><coordinates><x>432</x><y>1908</y><w>648</w><h>243</h></coordinates><panel_attributes>lt=&lt;&lt;&lt;&lt;-
+obstacles 0..*
+fg=#5b6570</panel_attributes><additional_attributes>10;100;70;100;70;250;630;250;630;10;700;10</additional_attributes></element><element><id>Relation</id><coordinates><x>684</x><y>1188</y><w>63</w><h>153</h></coordinates><panel_attributes>lt=-&gt;
+buttons
+fg=#5b6570</panel_attributes><additional_attributes>10;10;10;150</additional_attributes></element><element><id>Relation</id><coordinates><x>2304</x><y>693</y><w>972</w><h>171</h></coordinates><panel_attributes>lt=-
+_imu / body (0..1)
+fg=#5b6570</panel_attributes><additional_attributes>10;80;10;170;1055;170;1055;10</additional_attributes></element><element><id>Relation</id><coordinates><x>2439</x><y>756</y><w>315</w><h>225</h></coordinates><panel_attributes>lt=-&gt;
+mounts 0..*
+fg=#5b6570</panel_attributes><additional_attributes>10;10;10;160;330;160;330;230</additional_attributes></element><element><id>UMLClass</id><coordinates><x>2106</x><y>3348</y><w>1800</w><h>207</h></coordinates><panel_attributes>&lt;&lt;module&gt;&gt;
+main
+--
++init(): tuple
++check_motion_and_sensors(robot, color, ultrasonic): None
++check_gyro(hub, robot): None
++check_friction_and_force(field, robot, force): None
++check_preview(field): None
++main(): None
+--
+Integration checks use assertions. Operation errors remain owned by core classes.
+bg=#f5effc</panel_attributes><additional_attributes></additional_attributes></element></diagram>

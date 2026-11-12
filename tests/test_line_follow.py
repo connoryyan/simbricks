@@ -23,7 +23,8 @@ def line_follow_setup(monkeypatch):
     monkeypatch.setattr(example, 'right', right)
     monkeypatch.setattr(example, 'db', robot)
     monkeypatch.setattr(example, 'color', example.ColorSensor(example.Port.C))
-    monkeypatch.setattr(example, 'ultrasonic', example.UltrasonicSensor(example.Port.D))
+    monkeypatch.setattr(example, 'ultrasonic',
+                        example.UltrasonicSensor(example.Port.D))
     example.sim.initialize(example.init)
     monkeypatch.setattr(example, 'field', world.get_current_world())
 
@@ -33,7 +34,8 @@ def line_follow_setup(monkeypatch):
     reason='Video export requires FFmpeg and Pillow',
 )
 def test_direct_script_runs_outside_repository_and_saves_video():
-    script = Path(__file__).resolve().parents[1] / 'examples/line_follow/line_follow.py'
+    script = Path(__file__).resolve(
+    ).parents[1] / 'examples/line_follow/line_follow.py'
     result = subprocess.run(
         [sys.executable, '-B', str(script)],
         cwd=script.parent,
@@ -45,7 +47,11 @@ def test_direct_script_runs_outside_repository_and_saves_video():
     assert 'Stopped for obstacle' in result.stdout
     video = script.with_name('line_follow.mp4')
     assert video.read_bytes()[4:8] == b'ftyp'
-    decoded = subprocess.run([shutil.which('ffmpeg'), '-v', 'error', '-i', str(video), '-frames:v', '1', '-f', 'image2pipe', '-vcodec', 'png', 'pipe:1'], capture_output=True, timeout=30)
+    decoded = subprocess.run(
+        [shutil.which('ffmpeg'),
+         '-v', 'error', '-i', str(video),
+         '-frames:v', '1', '-f', 'image2pipe', '-vcodec', 'png', 'pipe:1'],
+        capture_output=True, timeout=30)
     assert decoded.returncode == 0
     assert decoded.stdout.startswith(b'\x89PNG')
 
@@ -55,11 +61,14 @@ def test_recording_uses_simulation_time_and_is_detached():
     field, db, trace, distance = run(frames)
     assert frames[0][0] == 0
     assert len(frames) > 1
-    assert frames[-1][0] == pytest.approx(clock.time_ms / 1000, abs=0.04, rel=0)
+    assert frames[-1][0] == pytest.approx(clock.time_ms
+                                          / 1000, abs=0.04, rel=0)
     for previous, current in zip(frames, frames[1:]):
-        assert current[0] - previous[0] == pytest.approx(1 / 30, abs=0.006, rel=0)
+        assert current[0] - \
+            previous[0] == pytest.approx(1 / 30, abs=0.006, rel=0)
     assert all((len(frame[2]) == 2 for frame in frames))
-    assert not any((type(item).__name__ == 'PoseRecorder' for item in clock.steppables))
+    assert not any(
+        (type(item).__name__ == 'PoseRecorder' for item in clock.steppables))
 
 
 def test_timeout_is_caught_and_recorded_frames_are_saved(monkeypatch, capsys):
@@ -78,7 +87,8 @@ def test_timeout_is_caught_and_recorded_frames_are_saved(monkeypatch, capsys):
     assert len(frames) > 1
     assert frames[-1][0] > 0.5
     assert example.db.state()[1] == pytest.approx(0, abs=0.01, rel=0)
-    assert not any((type(item).__name__ == 'PoseRecorder' for item in clock.steppables))
+    assert not any(
+        (type(item).__name__ == 'PoseRecorder' for item in clock.steppables))
 
 
 def test_line_width_and_winding_path():
@@ -87,8 +97,10 @@ def test_line_width_and_winding_path():
     assert field.get_reflection_at(100, 0) == 10
     assert field.get_reflection_at(100, 8) == 10
     assert field.get_reflection_at(100, 12) == 85
-    assert field.get_reflection_at(100, 10) == field.get_reflection_at(100, -10)
-    assert field.distance_to_line(100, 10) == pytest.approx(10, abs=5e-08, rel=0)
+    assert field.get_reflection_at(
+        100, 10) == field.get_reflection_at(100, -10)
+    assert field.distance_to_line(
+        100, 10) == pytest.approx(10, abs=5e-08, rel=0)
     for x, y in field.path:
         assert field.get_reflection_at(x, y) == 10
     assert max((y for _, y in field.path)) > 200
@@ -100,7 +112,8 @@ def test_obstacle_is_at_line_end_and_has_150_mm_height():
     obstacle = field.obstacles[0]
     assert field.path[-1] == (obstacle.xmin, 0)
     assert obstacle.height_mm == 150
-    assert field.raycast_distance(2200, 0, 0, z_mm=60) == pytest.approx(100, abs=5e-08, rel=0)
+    assert field.raycast_distance(
+        2200, 0, 0, z_mm=60) == pytest.approx(100, abs=5e-08, rel=0)
     assert field.raycast_distance(2200, 0, 0, z_mm=151) == 2000
     assert field.raycast_distance(2200, 0, 180, z_mm=60) == 2000
     assert field.raycast_distance(2200, 101, 0, z_mm=60) == 2000
@@ -112,7 +125,9 @@ def test_rays_hit_box_top_or_side_before_ground():
     assert hit.z_mm == 150
     assert hit.distance_mm == 50
     assert hit.reflection == field.obstacles[0].reflection
-    assert field.raycast_distance(2200, 0, 0, z_mm=200, pitch_deg=45) == pytest.approx(math.sqrt(20000), abs=5e-08, rel=0)
+    assert field.raycast_distance(
+        2200, 0, 0, z_mm=200, pitch_deg=45) == pytest.approx(
+        math.sqrt(20000), abs=5e-08, rel=0)
     assert field.raycast_distance(2200, 0, 0, max_mm=50, z_mm=60) == 50
 
 

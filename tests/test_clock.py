@@ -12,6 +12,7 @@ class Device:
         step_priority (float): Clock update phase; smaller phases run first.
         steps (list): Recorded simulation step durations in seconds.
     '''
+
     def __init__(self, priority=0):
         self.step_priority: float = priority
         self.steps: list[float] = []
@@ -54,8 +55,10 @@ def test_device_without_priority_uses_first_phase():
         Test clock updates for a device without an explicit priority.
 
         Attributes:
-            dt (float): Most recent step duration in seconds, available after step().
+            dt (float): Most recent step duration in seconds, available after
+                step().
         '''
+
         def step(self, dt_s):
             self.dt: float = dt_s
     clock = SimClock()
@@ -96,8 +99,10 @@ def test_groups_step_devices_in_phase_order():
 
         Attributes:
             name (str): Name appended to the clock test event list.
-            step_priority (float): Clock update phase; smaller phases run first.
+            step_priority (float): Clock update phase; smaller phases run
+                first.
         '''
+
         def __init__(self, name, priority):
             self.name: str = name
             self.step_priority: float = priority
@@ -119,7 +124,9 @@ def test_groups_step_devices_in_phase_order():
     sim.advance_ms(10)
     for offset in (0, 6):
         assert set(events[offset:offset + 2]) == {'left', 'right'}
-        assert events[offset + 2:offset + 6] == ['body', 'imu', 'controller', 'recorder']
+        assert events[offset + 2:offset + 6] == [
+            'body', 'imu', 'controller', 'recorder',
+        ]
 
 
 def test_registration_changes_apply_on_next_tick():

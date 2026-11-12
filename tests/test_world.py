@@ -24,10 +24,13 @@ class Field(World):
         bounds (tuple): Preview rectangle (xmin, ymin, xmax, ymax) in world mm.
         lines (list): Ground lines contributing to reflection readings.
         obstacles (list): Obstacle shapes tested by surface rays.
-        friction_coefficient (float): Uniform non-negative ground friction coefficient.
-        _friction_coefficient (float): Stored coefficient backing friction_coefficient.
+        friction_coefficient (float): Uniform non-negative ground friction
+            coefficient.
+        _friction_coefficient (float): Stored coefficient backing
+            friction_coefficient.
         _ambient_light (float): Stored ambient signal backing ambient_light.
     '''
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
@@ -36,13 +39,15 @@ def test_map_validation():
     for reflection in (-1, 101, float('nan')):
         with pytest.raises(ValueError, match='reflection'):
             Field(reflection=reflection)
-    for bounds in ((0, 0, 1), (0, 0, float('inf'), 1), (0, 0, 0, 1), (0, 1, 1, 0)):
+    for bounds in ((0, 0, 1), (0, 0, float('inf'), 1),
+                   (0, 0, 0, 1), (0, 1, 1, 0)):
         with pytest.raises(ValueError, match='bounds'):
             Field(bounds=bounds)
 
 
 def test_line_validation():
-    for options in ({'width_mm': 0}, {'edge_width_mm': 30}, {'reflection': -1}):
+    for options in ({'width_mm': 0}, {'edge_width_mm': 30},
+                    {'reflection': -1}):
         with pytest.raises(ValueError):
             Polyline([(0, 0), (1, 1)], **options)
     for points in ([], [(0, 0)], [(0, 0), (1,)], [(0, 0), (float('nan'), 1)]):
@@ -88,13 +93,40 @@ def test_preview_with_and_without_trace(tmp_path):
     field.add_line(Polyline([(0, 0), (100, 0)]))
     field.add_obstacle(BoxObstacle(150, -10, 200, 10, 100))
     path = tmp_path / 'preview.svg'
+    assert field.preview_error is None
     for trace in ((), [(0, 0, 0), (100, 0, 90)]):
-        field.save_preview(path, trace)
+        assert field.save_preview(path, trace) is True
+        assert field.preview_error is None
         root = ET.parse(path).getroot()
         namespace = '{http://www.w3.org/2000/svg}'
         assert len(root.findall(namespace + 'polyline')) == (2 if trace else 1)
         assert len(root.findall(namespace + 'circle')) == (1 if trace else 0)
         assert len(root.findall(namespace + 'rect')) == 2
+
+
+def test_preview_handles_missing_directory_and_can_retry(tmp_path):
+    field = Field()
+    path = tmp_path / 'missing' / 'preview.svg'
+    assert field.save_preview(path) is False
+    assert isinstance(field.preview_error, FileNotFoundError)
+    assert not path.exists()
+
+    path.parent.mkdir()
+    assert field.save_preview(path) is True
+    assert field.preview_error is None
+    assert ET.parse(path).getroot().tag.endswith('svg')
+
+
+def test_preview_handles_permission_error(monkeypatch, tmp_path):
+    field = Field()
+    error = PermissionError('Folder is read-only')
+
+    def fail_write(path, text, encoding):
+        raise error
+
+    monkeypatch.setattr(Path, 'write_text', fail_write)
+    assert field.save_preview(tmp_path / 'preview.svg') is False
+    assert field.preview_error is error
 
 
 def test_abstract_geometry_defaults():
@@ -151,7 +183,8 @@ def test_world_setters_preserve_previous_values():
     ):
         with pytest.raises(TypeError):
             operation()
-    for operation in (lambda: field.set_reflection(101), lambda: field.set_distance(-1)):
+    for operation in (lambda: field.set_reflection(101),
+                      lambda: field.set_distance(-1)):
         with pytest.raises(ValueError):
             operation()
     assert field.ambient_light == 5
@@ -171,10 +204,13 @@ class CustomWorld(World):
         bounds (tuple): Preview rectangle (xmin, ymin, xmax, ymax) in world mm.
         lines (list): Ground lines contributing to reflection readings.
         obstacles (list): Obstacle shapes tested by surface rays.
-        friction_coefficient (float): Uniform non-negative ground friction coefficient.
-        _friction_coefficient (float): Stored coefficient backing friction_coefficient.
+        friction_coefficient (float): Uniform non-negative ground friction
+            coefficient.
+        _friction_coefficient (float): Stored coefficient backing
+            friction_coefficient.
         _ambient_light (float): Stored ambient signal backing ambient_light.
     '''
+
     def __init__(self):
         super().__init__(ambient_light=7)
         self.add_line(Polyline([(0, 0), (500, 0)], width_mm=20))
@@ -205,7 +241,8 @@ def test_invalid_geometry_is_rejected():
         field.add_line(object())
     with pytest.raises(TypeError):
         field.add_obstacle(object())
-    for points in ([], [(0, 0)], [(0, 0), (0, 0)], [(0, 0), (1, float('nan'))]):
+    for points in ([], [(0, 0)], [(0, 0), (0, 0)],
+                   [(0, 0), (1, float('nan'))]):
         with pytest.raises(ValueError):
             Polyline(points)
     with pytest.raises(ValueError):
@@ -242,4 +279,5 @@ def test_each_map_has_a_subclass_and_valid_preview():
         assert image.tag == namespace + 'svg'
         field = cls()
         assert len(image.findall(namespace + 'polyline')) == len(field.lines)
-        assert len(image.findall(namespace + 'rect')) == 1 + len(field.obstacles)
+        assert len(image.findall(namespace + 'rect')
+                   ) == 1 + len(field.obstacles)

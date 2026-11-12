@@ -1,6 +1,13 @@
 import pytest
 
-from sim.validation import boolean, integer, number, sequence, unit_vector, vector
+from sim.validation import (
+    boolean,
+    integer,
+    number,
+    sequence,
+    unit_vector,
+    vector,
+)
 
 
 def test_integer_and_length_validation():
